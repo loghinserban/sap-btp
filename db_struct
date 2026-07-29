@@ -7,7 +7,6 @@ role
 -role_id
 -role_name
 -role_desc
--emp_id
 
 skill
 -skill_id
@@ -18,8 +17,19 @@ emp_info
 -info_id
 -emp_id
 -skill_id
+-dep_id
+-rev_id
 -name
--departament
+-age
+-yers_in_comp
 
+departament
+-dep_id
+-dep_name
+-dep_desc
 
-
+review
+-rev_id
+-rev_title
+-rev_content
+-rev_stars
