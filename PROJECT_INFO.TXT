@@ -1,0 +1,35 @@
+mapa de expertiza
+
+	==FEATURE 0 PROFIL==
+
+-- iti adaugi skills si un rating de la 1-5 stele
+-- last time used + ce mai vrei sa inveti pe viitor
+-- vrei sa fi mentor sau ai nevoie de mentor 
+--import proiecte pe care ai lucrat, ai extrage skills automat
+-setezi cat si cum vrei sa fi dernajzat
+-- din profil vezi: "n-a mai lucrat pe SAP de 3 ani"
+
+	==RECOMANDRI==
+-poti sa recomanzi tu ca user un coleg de-al tau, sa i lasi review. +why
+-poti sa vezi cine te-a recomandat + why
+-daca te-a recomandat cineva cu vechime mai mare sa aiba o pondere diferita fata de cineva care nu are atata experinta
+
+	==FEATURE 1. SEARCH - CORE -UL APLICATIEI SPRINT PRINCIPAL == 
+
+--cautare useri dupa skills, filtre dupa nume varsta vechime skills, etc
+--cautare dupa skills combinate (eg. : hana + react)
+
+	== FEATURE 2. NOT MANDATORY NOW REACH==
+--cel mai scurt drum intre admin si cel ales
+--de ce au legatura
+
+	==FEATURE 3. NOTE MANDATORY NOW RISKS==
+--concediu, demisie - what happens
+--goluri pe echipe - lack of skills
+-- skills in companie - pierde vs castiga
+
+	==FEATURE 4. NOT MANDATORY NOW SOCIAL==
+--#badge uri
+
+MANDATORY
+
