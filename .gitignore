@@ -22,3 +22,5 @@ mta_archives/
 
 # auto generated wildcard
 gen/db/.env
+# auto generated wildcard
+db/.env
