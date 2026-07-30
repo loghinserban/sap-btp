@@ -22,6 +22,9 @@
   "private": true,
   "cds": {
     "requires": {
+      "db": {
+        "kind": "hana"
+      },
       "destinations": true,
       "html5-repo": true
     }
