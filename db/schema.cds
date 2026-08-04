@@ -26,9 +26,9 @@ entity EmployeeSkills : cuid{
 entity Employees:cuid{
     firstName: String(100);
     lastName: String(100);
-    age:Integer;
+    //age:Integer;
+    email : String(100);
     experience: Integer;
-
     skills: Composition of many EmployeeSkills on skills.employee=$self;
     department: Association to Departments;
     reviews: Composition of many Reviews on reviews.employee =$self;
