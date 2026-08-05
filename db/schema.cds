@@ -26,6 +26,7 @@ entity EmployeeSkills : cuid{
 entity Employees:cuid{
     firstName: String(100);
     lastName: String(100);
+    dateOfBirth: Date;
     //age:Integer;
     email : String(100);
     experience: Integer;
