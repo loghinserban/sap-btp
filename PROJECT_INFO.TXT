@@ -1,27 +1,29 @@
 mapa de expertiza
 
 	==FEATURE 0 PROFIL==
+	
 
--- iti adaugi skills si un rating de la 1-5 stele
--- last time used + ce mai vrei sa inveti pe viitor
--- vrei sa fi mentor sau ai nevoie de mentor 
---import proiecte pe care ai lucrat, ai extrage skills automat
--setezi cat si cum vrei sa fi dernajzat
--- din profil vezi: "n-a mai lucrat pe SAP de 3 ani"
+-- ca si user: 1. iti adaugi skills si un rating de la 1-5 stele
+-- 2. last time used + ce mai vrei sa inveti pe viitor
+-- 3. vrei sa fi mentor sau ai nevoie de mentor 
+-- 4. import proiecte pe care ai lucrat, ai extrage skills automat
+-5. setezi cat si cum vrei sa fi dernajzat
+-- din profil - ? ca si admin sau user? nu am stabilit vezi: "n-a mai lucrat pe SAP de 3 ani" (optional)
 
-	==RECOMANDRI==
--poti sa recomanzi tu ca user un coleg de-al tau, sa i lasi review. +why
--poti sa vezi cine te-a recomandat + why
+	==feature 5 not mandatory RECOMANDRI==
+-ca user: 1.poti sa recomanzi tu un coleg de-al tau, sa-i lasi review. +why
+-2.poti sa vezi cine te-a recomandat + why
 -daca te-a recomandat cineva cu vechime mai mare sa aiba o pondere diferita fata de cineva care nu are atata experinta
+--
 
 	==FEATURE 1. SEARCH - CORE -UL APLICATIEI SPRINT PRINCIPAL == 
 
---cautare useri dupa skills, filtre dupa nume varsta vechime skills, etc
+--cautare useri dupa skills, dupa nume email, etc  filtre dupa varsta vechime skills, etc
 --cautare dupa skills combinate (eg. : hana + react)
 
 	== FEATURE 2. NOT MANDATORY NOW REACH==
 --cel mai scurt drum intre admin si cel ales
---de ce au legatura
+--de ce au legatura 
 
 	==FEATURE 3. NOTE MANDATORY NOW RISKS==
 --concediu, demisie - what happens
@@ -31,5 +33,17 @@ mapa de expertiza
 	==FEATURE 4. NOT MANDATORY NOW SOCIAL==
 --#badge uri
 
-MANDATORY
+MANDATORY:
+
+schema.cds roluri, sprint pentru demo
+baza de date definita pentru feature 0 si 1 care sa permita extindere pentru celelate features
+
+backend : node.js
+frontend : sap ui 5 
+databse : sap hana 
+
+
+-admin adds users
+
+-admin view and user view. not db logic
 

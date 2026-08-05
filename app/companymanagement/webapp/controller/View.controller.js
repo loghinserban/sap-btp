@@ -24,7 +24,7 @@ sap.ui.define([
             //     }
             // });
 
-            oModel.read("/Employees", {
+            oModel.read("/Departments", {
                 // urlParameters: {
                 //     $expand: "department"
                 // },

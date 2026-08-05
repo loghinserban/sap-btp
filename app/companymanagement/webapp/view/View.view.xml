@@ -44,7 +44,7 @@
                 items="{
                 path: '/Departments'
                 }"
-                selectedKey="{Department_ID}"
+                selectedKey="{department_ID}"
                 placeholder="Select department"
                 >
                 <items>
