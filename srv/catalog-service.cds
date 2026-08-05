@@ -1,6 +1,6 @@
 using db from '../db/schema';
 
-service AppService {
+service CatalogService {
     entity Skills as projection on db.Skills;
     entity Departments as projection on db.Departments;
     entity Reviews as projection on db.Reviews;

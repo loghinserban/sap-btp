@@ -1,1 +1,1 @@
-using AppService as service from '../../srv/catalog-service';
+using CatalogService as service from '../../srv/catalog-service';

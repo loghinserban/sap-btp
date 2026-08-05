@@ -1,6 +1,61 @@
 <mvc:View controllerName="companymanagement.controller.View"
     xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
     xmlns="sap.m">
-    <Page id="page" title="{i18n>title}">
-    </Page>
+
+<Panel>
+     <List
+            id="employeeList"
+            backgroundDesign="Translucent"
+            growing="true"
+            mode="SingleSelectMaster"
+            itemPress=".onItemPress"
+            items="{path:'/Employees',parameters:{'$expand':'department'}}"
+        >
+            <headerToolbar>
+                <Toolbar>
+                    <SearchField
+                        width="30%"
+                        search="onItemSearch"
+                    />
+                </Toolbar>
+            </headerToolbar>
+            <items>
+               <ObjectListItem
+                    title="{firstName} {lastName}"
+                    type="Active"/>
+            </items>
+        </List>
+
+     <VBox class="sapUiSmallMargin">
+            <Label text="Employee Name" />
+            <Input id="employeeName" placeholder="" />
+
+            <Label text="Email" />
+            <Input id="email" placeholder="" />
+
+            <Label text = "Date of birth" />
+            <DatePicker id="dateOfBirth" placeholder="Select date of birth" />
+           
+            <Label text="Department" />
+            <ComboBox 
+
+                id = "cbDepartment"
+                items="{
+                path: '/Departments'
+                }"
+                selectedKey="{Department_ID}"
+                placeholder="Select department"
+                >
+                <items>
+                    <core:Item key="{ID}" text="{name}" />
+                </items>
+
+            </ComboBox>
+
+            <Button text="Add Employee" type="Emphasized" press=".onAddEmployee" />
+        </VBox>
+
+</Panel>
+
 </mvc:View>
