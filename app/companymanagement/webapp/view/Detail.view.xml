@@ -1,0 +1,74 @@
+<mvc:View
+    controllerName="companymanagement.controller.Detail"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+>
+<Page showNavButton="true" navButtonPress=".onNavback" title="Employee Details">
+
+    <VBox id="viewMode" class="sapUiLargeMargin">
+        <ObjectHeader
+            title="{firstName} {lastName}"
+            number="{experience}"
+            intro="{email}"
+        />
+        
+        <VBox class="sapUiMediumMarginTop">
+            <HBox class="sapUiSmallMarginBottom">
+                <Label text="First Name:" class="sapUiBold" width="150%" />
+                <Text text="{firstName}" />
+            </HBox>
+            
+            <HBox class="sapUiSmallMarginBottom">
+                <Label text="Last Name:" class="sapUiBold" width="150%" />
+                <Text text="{lastName}" />
+            </HBox>
+            
+            <HBox class="sapUiSmallMarginBottom">
+                <Label text="Email:" class="sapUiBold" width="150%" />
+                <Text text="{email}" />
+            </HBox>
+            
+            <HBox class="sapUiSmallMarginBottom">
+                <Label text="Experience:" class="sapUiBold" width="150%" />
+                <Text text="{experience}" />
+            </HBox>
+            
+            <HBox class="sapUiSmallMarginBottom">
+                <Label text="Date of Birth:" class="sapUiBold" width="150%" />
+                <Text text="{path:'dateOfBirth', type:'sap.ui.model.type.Date', formatOptions:{pattern:'dd.MM.yyyy'}}" />
+            </HBox>
+            
+            <HBox class="sapUiMediumMarginTop">
+                <Button text="Update Employee" type="Emphasized" press=".onEnterEditMode" />
+                <Button text="Delete Employee" type="Reject" press=".onDeleteEmployee" class="sapUiSmallMarginStart" />
+            </HBox>
+        </VBox>
+    </VBox>
+
+    <VBox id="editMode" class="sapUiLargeMargin sapUiHidden">
+
+        <Label text="First Name" />
+        <Input id="inpFirstName" value="{firstName}" />
+
+        <Label text="Last Name" />
+        <Input id="inpLastName" value="{lastName}" />
+
+        <Label text="Email" />
+        <Input id="inpEmail" value="{email}" />
+
+        <Label text="Experience" />
+        <Input id="inpExperience" type="Number" value="{experience}" />
+
+        <Label text="Date of Birth" />
+        <DatePicker id="inpDateOfBirth" value="{dateOfBirth}" />
+
+        <HBox class="sapUiMediumMarginTop">
+            <Button text="Save" type="Emphasized" press=".onSaveUpdate" />
+            <Button text="Cancel" press=".onCancelEditMode" class="sapUiSmallMarginStart" />
+        </HBox>
+
+    </VBox>
+
+</Page>
+</mvc:View>

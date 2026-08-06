@@ -128,12 +128,23 @@
           "target": [
             "TargetView"
           ]
+        },
+        {
+          "name": "RouteDetail",
+          "pattern": "detail/{param}",
+          "target": [
+            "TargetDetail"
+          ]
         }
       ],
       "targets": {
         "TargetView": {
           "id": "View",
           "name": "View"
+        },
+        "TargetDetail": {
+          "id": "Detail",
+          "name": "Detail"
         }
       }
     },

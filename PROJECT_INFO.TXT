@@ -47,3 +47,7 @@ databse : sap hana
 
 -admin view and user view. not db logic
 
+
+
+all fields in a dialog add employee - popup with fields
+ headers 
