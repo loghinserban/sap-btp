@@ -1,61 +1,94 @@
-<mvc:View controllerName="companymanagement.controller.View"
+<mvc:View
+    controllerName="companymanagement.controller.View"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns:core="sap.ui.core"
-    xmlns="sap.m">
+    xmlns:smartFilterBar="sap.ui.comp.smartfilterbar"
+    xmlns:smartTable="sap.ui.comp.smarttable"
+    xmlns="sap.m"
+    height="100%"
+>
+    <Page
+        id="adminPage"
+        title="{i18n>adminPageTitle}"
+        enableScrolling="false"
+        class="sapUiResponsiveContentPadding"
+    >
+        <content>
+            <VBox
+                id="adminContent"
+                fitContainer="true"
+            >
+                <smartFilterBar:SmartFilterBar
+                    id="smartFilterBar"
+                    entitySet="Employees"
+                    enableBasicSearch="true"
+                    useToolbar="false"
+                />
 
-<Panel>
-     <List
-            id="employeeList"
-            backgroundDesign="Translucent"
-            growing="true"
-            mode="SingleSelectMaster"
-            itemPress=".onItemPress"
-            items="{path:'/Employees',parameters:{'$expand':'department'}}"
-        >
-            <headerToolbar>
-                <Toolbar>
-                    <SearchField
-                        width="30%"
-                        search="onItemSearch"
-                    />
-                </Toolbar>
-            </headerToolbar>
-            <items>
-               <ObjectListItem
-                    title="{firstName} {lastName}"
-                    type="Active"/>
-            </items>
-        </List>
-
-     <VBox class="sapUiSmallMargin">
-            <Label text="Employee Name" />
-            <Input id="employeeName" placeholder="" />
-
-            <Label text="Email" />
-            <Input id="email" placeholder="" />
-
-            <Label text = "Date of birth" />
-            <DatePicker id="dateOfBirth" placeholder="Select date of birth" />
-           
-            <Label text="Department" />
-            <ComboBox 
-
-                id = "cbDepartment"
-                items="{
-                path: '/Departments'
-                }"
-                selectedKey="{department_ID}"
-                placeholder="Select department"
+                <smartTable:SmartTable
+                    id="employeeSmartTable"
+                    entitySet="Employees"
+                    smartFilterId="smartFilterBar"
+                    tableType="ResponsiveTable"
+                    header="{i18n>employeesTableHeader}"
+                    showRowCount="true"
+                    useVariantManagement="false"
+                    useTablePersonalisation="true"
+                    enableAutoBinding="true"
+                    enableAutoColumnWidth="true"
+                    enableCopy="false"
+                    requestAtLeastFields="ID"
+                    initiallyVisibleFields="firstName,lastName,email,department/name,experience,dateOfBirth"
+                    beforeRebindTable=".onBeforeRebindTable"
+                    class="sapUiResponsiveContentPadding"
                 >
-                <items>
-                    <core:Item key="{ID}" text="{name}" />
-                </items>
+                    <smartTable:layoutData>
+                        <FlexItemData
+                            id="employeeSmartTableLayoutData"
+                            growFactor="1"
+                            baseSize="0%"
+                        />
+                    </smartTable:layoutData>
 
-            </ComboBox>
+                    <smartTable:customToolbar>
+                        <OverflowToolbar id="employeeTableToolbar">
+                            <ToolbarSpacer id="employeeTableToolbarSpacer" />
+                            <Button
+                                id="btnCreateDepartment"
+                                text="{i18n>createDepartment}"
+                                type="Transparent"
+                                icon="sap-icon://add-folder"
+                                press=".onOpenDepartmentDialog"
+                            />
+                            <Button
+                                id="btnAddEmployee"
+                                text="{i18n>addEmployee}"
+                                type="Emphasized"
+                                icon="sap-icon://add-employee"
+                                press=".onOpenAddEmployeeDialog"
+                            />
+                        </OverflowToolbar>
+                    </smartTable:customToolbar>
 
-            <Button text="Add Employee" type="Emphasized" press=".onAddEmployee" />
-        </VBox>
-
-</Panel>
-
+                    <Table
+                        id="employeeTable"
+                        mode="SingleSelectMaster"
+                        selectionChange=".onItemPress"
+                        growing="true"
+                        growingThreshold="25"
+                        growingScrollToLoad="true"
+                        sticky="ColumnHeaders,HeaderToolbar"
+                    >
+                        <noData>
+                            <IllustratedMessage
+                                id="employeeTableNoData"
+                                illustrationType="sapIllus-NoEntries"
+                                title="{i18n>noEmployeesTitle}"
+                                description="{i18n>noEmployeesDescription}"
+                            />
+                        </noData>
+                    </Table>
+                </smartTable:SmartTable>
+            </VBox>
+        </content>
+    </Page>
 </mvc:View>

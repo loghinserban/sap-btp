@@ -1,0 +1,119 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form"
+>
+
+    <Dialog
+        id="employeeFormDialog"
+        title="{form>/title}"
+        contentWidth="30rem"
+        draggable="true"
+    >
+        <content>
+            <form:SimpleForm
+                id="employeeForm"
+                layout="ColumnLayout"
+                columnsM="1"
+                columnsL="1"
+                columnsXL="1"
+                editable="true"
+            >
+                <Label
+                    id="lblFormFirstName"
+                    text="{i18n>firstName}"
+                    required="true"
+                />
+                <Input
+                    id="formFirstName"
+                    maxLength="100"
+                    liveChange=".onRequiredFieldLiveChange"
+                />
+
+                <Label
+                    id="lblFormLastName"
+                    text="{i18n>lastName}"
+                    required="true"
+                />
+                <Input
+                    id="formLastName"
+                    maxLength="100"
+                    liveChange=".onRequiredFieldLiveChange"
+                />
+
+                <Label
+                    id="lblFormEmail"
+                    text="{i18n>email}"
+                    required="true"
+                />
+                <Input
+                    id="formEmail"
+                    type="Email"
+                    maxLength="100"
+                    liveChange=".onRequiredFieldLiveChange"
+                />
+
+                <Label
+                    id="lblFormDateOfBirth"
+                    text="{i18n>dateOfBirth}"
+                />
+                <DatePicker
+                    id="formDateOfBirth"
+                    placeholder="{i18n>selectDateOfBirth}"
+                    valueFormat="yyyy-MM-dd"
+                    displayFormat="dd.MM.yyyy"
+                    change=".onDateOfBirthChange"
+                />
+
+                <Label
+                    id="lblFormExperience"
+                    text="{i18n>experience}"
+                />
+                <StepInput
+                    id="formExperience"
+                    min="0"
+                    max="60"
+                    step="1"
+                    width="100%"
+                />
+
+                <Label
+                    id="lblFormDepartment"
+                    text="{i18n>department}"
+                    required="true"
+                />
+                <ComboBox
+                    id="formDepartment"
+                    width="100%"
+                    placeholder="{i18n>selectDepartment}"
+                    items="{ path: '/Departments', sorter: { path: 'name' } }"
+                    selectionChange=".onRequiredFieldLiveChange"
+                >
+                    <items>
+                        <core:Item
+                            key="{ID}"
+                            text="{name}"
+                        />
+                    </items>
+                </ComboBox>
+            </form:SimpleForm>
+        </content>
+
+        <beginButton>
+            <Button
+                id="btnConfirmEmployeeForm"
+                text="{form>/confirmText}"
+                press=".onEmployeeFormConfirm"
+                type="Emphasized"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancelEmployeeForm"
+                text="{i18n>cancel}"
+                press=".onCloseEmployeeForm"
+                type="Transparent"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

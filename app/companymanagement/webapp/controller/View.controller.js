@@ -1,97 +1,145 @@
 sap.ui.define([
-    "sap/ui/core/mvc/Controller",
-    "sap/m/Button",
-    "sap/m/MessageToast",
-    "sap/ui/model/json/JSONModel",
+    "companymanagement/controller/BaseController",
+    "sap/ui/core/library",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
-    "sap/ui/core/UIComponent"
-], (Controller, Button, MessageToast, JsonModel, Filter, FilterOperator, UIComponent) => {
+    "sap/m/MessageToast"
+], (BaseController, coreLibrary, Filter, FilterOperator, MessageToast) => {
     "use strict";
-    return Controller.extend("companymanagement.controller.View", {
+
+    const ValueState = coreLibrary.ValueState;
+
+    // Fields the free-text search box matches against
+    const BASIC_SEARCH_FIELDS = ["firstName", "lastName", "email"];
+
+    return BaseController.extend("companymanagement.controller.View", {
+
         onInit() {
-            const oModel = this.getOwnerComponent().getModel();
-            
-            oModel.read("/Departments", {
-                success: (oResult) => {
-                    console.log("Departments loaded:", oResult);
-                },
-                error: (oError) => {
-                    console.error("Failed to load departments:", oError);
-                    MessageToast.show("Failed to load departments");
-                }
-            });
+            this._oDepartmentDialog = null;
         },
 
-        onItemPress: function (oEvent) {
-            const oItem = oEvent.getParameter("listItem");
-            const oCtx = oItem.getBindingContext();
-            const sPath = oCtx.getPath();
-            
-            const sId = sPath.match(/guid'(.+?)'/)[1];
-            this.getOwnerComponent().getRouter().navTo("RouteDetail", { param: sId });
-        },
+        // ---------------------------------------------------------------
+        // List report
+        // ---------------------------------------------------------------
 
-        onItemSearch: function (oEvent) {
-            const sValue = oEvent.getParameter("value");
-            const oList = this.byId("employeeList");
-            const oBinding = oList.getBinding("items");
-            
-            const aFilters = [];
-            if (sValue) {
-                aFilters.push(new Filter("firstName", FilterOperator.Contains, sValue));
-                aFilters.push(new Filter("lastName", FilterOperator.Contains, sValue));
-                aFilters.push(new Filter("email", FilterOperator.Contains, sValue));
+        /**
+         * The Department column reads department/name, so the association has to be
+         * expanded on every rebind - including the ones the SmartFilterBar triggers.
+         *
+         * The basic search value is not applied automatically either: SmartFilterBar
+         * only exposes it, so it becomes an OR filter over the name/email fields,
+         * AND-ed with whatever the field filters already produced.
+         */
+        onBeforeRebindTable(oEvent) {
+            const mBindingParams = oEvent.getParameter("bindingParams");
+
+            mBindingParams.parameters = mBindingParams.parameters || {};
+            mBindingParams.parameters.expand = "department";
+
+            const sQuery = (this.byId("smartFilterBar").getBasicSearchValue() || "").trim();
+
+            if (sQuery) {
+                mBindingParams.filters.push(new Filter({
+                    filters: BASIC_SEARCH_FIELDS.map(
+                        (sField) => new Filter(sField, FilterOperator.Contains, sQuery)
+                    ),
+                    and: false
+                }));
             }
-            
-            const oFilter = new Filter({
-                filters: aFilters,
-                and: false
-            });
-            
-            oBinding.filter(aFilters.length > 0 ? oFilter : []);
         },
 
-        onAddEmployee: function () {
-            const oModel = this.getOwnerComponent().getModel();
-            
-            const sEmployeeName = this.byId("employeeName").getValue();
-            const sEmail = this.byId("email").getValue();
-            const sDepartmentId = this.byId("cbDepartment").getSelectedKey();
-            const sDateOfBirth = this.byId("dateOfBirth").getDateValue();
-            
-            if (!sEmployeeName || !sEmail || !sDepartmentId) {
-                MessageToast.show("Please fill in all required fields.");
+        onItemPress(oEvent) {
+            const oItem = oEvent.getParameter("listItem");
+            const oContext = oItem && oItem.getBindingContext();
+
+            if (!oContext) {
                 return;
             }
 
-            const oEmployeeData = {
-                firstName: sEmployeeName,
-                email: sEmail,
-                dateOfBirth: sDateOfBirth,
-                department_ID: sDepartmentId
-            };
+            this.getRouter().navTo("RouteDetail", { param: oContext.getProperty("ID") });
+        },
 
-            oModel.create("/Employees", oEmployeeData, {
+        // ---------------------------------------------------------------
+        // Add employee
+        // ---------------------------------------------------------------
+
+        onOpenAddEmployeeDialog() {
+            return this.openEmployeeForm("add");
+        },
+
+        onCloseEmployeeForm() {
+            this.closeEmployeeForm();
+        },
+
+        onEmployeeFormConfirm() {
+            const oPayload = this.collectEmployeeForm();
+
+            if (!oPayload) {
+                return;
+            }
+
+            const oBundle = this.getResourceBundle();
+
+            this.getODataModel().create("/Employees", oPayload, {
                 success: () => {
-                    const oList = this.byId("employeeList");
-                    const oBinding = oList.getBinding("items");
-                    oBinding.refresh();
-                    
-                    this.byId("employeeName").setValue("");
-                    this.byId("email").setValue("");
-                    this.byId("cbDepartment").setSelectedKey("");
-                    this.byId("dateOfBirth").setDateValue(null);
-                    
-                    MessageToast.show("Employee added successfully!");
+                    MessageToast.show(oBundle.getText("msgEmployeeAdded"));
+                    this.byId("employeeSmartTable")?.rebindTable();
+                    this.closeEmployeeForm();
                 },
                 error: (oError) => {
-                    console.error("Create failed:", oError);
-                    MessageToast.show("Error adding employee.");
+                    console.error("Create employee failed:", oError);
+                    MessageToast.show(oBundle.getText("msgEmployeeAddError"));
                 }
             });
+        },
+
+        // ---------------------------------------------------------------
+        // Create department
+        // ---------------------------------------------------------------
+
+        async onOpenDepartmentDialog() {
+            this._oDepartmentDialog ??= await this.loadFragment({
+                name: "companymanagement.view.DepartmentDialog"
+            });
+            this._oDepartmentDialog.open();
+        },
+
+        onCloseDepartmentDialog() {
+            this._oDepartmentDialog?.close();
+        },
+
+        onAddDepartment() {
+            const oBundle = this.getResourceBundle();
+            const oNameInput = this.byId("departmentName");
+            const sName = oNameInput.getValue().trim();
+
+            if (!sName) {
+                oNameInput.setValueState(ValueState.Error);
+                MessageToast.show(oBundle.getText("msgFillRequiredFields"));
+                return;
+            }
+            oNameInput.setValueState(ValueState.None);
+
+            this.getODataModel().create("/Departments", {
+                name: sName,
+                description: this.byId("departmentDescription").getValue().trim()
+            }, {
+                success: () => {
+                    MessageToast.show(oBundle.getText("msgDepartmentAdded"));
+                    this.onCloseDepartmentDialog();
+                },
+                error: (oError) => {
+                    console.error("Create department failed:", oError);
+                    MessageToast.show(oBundle.getText("msgDepartmentAddError"));
+                }
+            });
+        },
+
+        onDepartmentDialogClosed() {
+            const oNameInput = this.byId("departmentName");
+            oNameInput.setValue("");
+            oNameInput.setValueState(ValueState.None);
+            this.byId("departmentDescription").setValue("");
         }
     });
 });
-
-

@@ -21,6 +21,8 @@ entity Reviews : cuid{
 entity EmployeeSkills : cuid{
     employee : Association to Employees;
     skill: Association to Skills;
+    rating : Integer @assert.range: {minimum: 1, maximum: 5};
+    lastUsed: Date;
 }
 
 entity Employees:cuid{
