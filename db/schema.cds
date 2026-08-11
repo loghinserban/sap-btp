@@ -21,11 +21,14 @@ entity Reviews : cuid{
 entity EmployeeSkills : cuid{
     employee : Association to Employees;
     skill: Association to Skills;
+    rating : Integer @assert.range: {minimum: 1, maximum: 5};
+    lastUsed: Date;
 }
 
 entity Employees:cuid{
     firstName: String(100);
     lastName: String(100);
+    dateOfBirth: Date;
     //age:Integer;
     email : String(100);
     experience: Integer;

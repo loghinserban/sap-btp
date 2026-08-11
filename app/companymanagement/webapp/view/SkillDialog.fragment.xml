@@ -1,0 +1,86 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form"
+>
+    <Dialog
+        id="skillDialog"
+        title="{i18n>addSkill}"
+        contentWidth="30rem"
+        draggable="true"
+    >
+        <content>
+            <form:SimpleForm
+                id="skillForm"
+                layout="ColumnLayout"
+                columnsM="1"
+                columnsL="1"
+                columnsXL="1"
+                editable="true"
+            >
+                <Label
+                    id="lblSkillSelect"
+                    text="{i18n>skillName}"
+                    required="true"
+                />
+                <ComboBox
+                    id="skillSelect"
+                    width="100%"
+                    placeholder="{i18n>selectSkill}"
+                    items="{ path: '/Skills', sorter: { path: 'name' } }"
+                    selectionChange=".onRequiredFieldLiveChange"
+                >
+                    <items>
+                        <core:Item
+                            key="{ID}"
+                            text="{name}"
+                        />
+                    </items>
+                </ComboBox>
+
+                <Label
+                    id="lblSkillRating"
+                    text="{i18n>skillRating}"
+                    required="true"
+                />
+                <RatingIndicator
+                    id="skillRating"
+                    maxValue="5"
+                    value="3"
+                    editable="true"
+                />
+                <Text
+                    id="txtRatingLegend"
+                    text="1 = heard of it, 2 = with help, 3 = on my own, 4 = complex work, 5 = can teach others"
+                />
+
+                <Label
+                    id="lblSkillLastUsed"
+                    text="{i18n>lastUsed}"
+                />
+                <DatePicker
+                    id="skillLastUsed"
+                    valueFormat="yyyy-MM-dd"
+                    displayFormat="dd.MM.yyyy"
+                    placeholder="{i18n>selectLastUsed}"
+                />
+            </form:SimpleForm>
+        </content>
+        <beginButton>
+            <Button
+                id="btnConfirmSkill"
+                text="{i18n>save}"
+                press=".onSaveSkill"
+                type="Emphasized"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancelSkill"
+                text="{i18n>cancel}"
+                press=".onCloseSkillDialog"
+                type="Transparent"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

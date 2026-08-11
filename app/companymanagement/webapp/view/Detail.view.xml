@@ -1,0 +1,440 @@
+<mvc:View
+    controllerName="companymanagement.controller.Detail"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.uxap"
+    xmlns:layout="sap.ui.layout"
+    xmlns:form="sap.ui.layout.form"
+    xmlns:m="sap.m"
+    height="100%"
+>
+    <ObjectPageLayout
+        id="employeeObjectPage"
+        showTitleInHeaderContent="true"
+        upperCaseAnchorBar="false"
+        useIconTabBar="false"
+        showAnchorBarPopover="false"
+        busyIndicatorDelay="0"
+    >
+        <headerTitle>
+            <ObjectPageDynamicHeaderTitle id="employeeHeaderTitle">
+                <expandedHeading>
+                    <m:Title
+                        id="employeeTitleExpanded"
+                        text="{firstName} {lastName}"
+                        wrapping="true"
+                    />
+                </expandedHeading>
+
+                <snappedHeading>
+                    <m:FlexBox
+                        id="employeeSnappedHeading"
+                        fitContainer="true"
+                        alignItems="Center"
+                    >
+                        <m:Avatar
+                            id="employeeAvatarSnapped"
+                            initials="{= (${firstName} || '').charAt(0) + (${lastName} || '').charAt(0) }"
+                            backgroundColor="Accent6"
+                            displaySize="XS"
+                            class="sapUiTinyMarginEnd"
+                        />
+                        <m:Title
+                            id="employeeTitleSnapped"
+                            text="{firstName} {lastName}"
+                            wrapping="true"
+                        />
+                    </m:FlexBox>
+                </snappedHeading>
+
+                <expandedContent>
+                    <m:Text
+                        id="employeeSubtitleExpanded"
+                        text="{department/name}"
+                    />
+                </expandedContent>
+
+                <snappedContent>
+                    <m:Text
+                        id="employeeSubtitleSnapped"
+                        text="{department/name}"
+                    />
+                </snappedContent>
+
+                <snappedTitleOnMobile>
+                    <m:Title
+                        id="employeeTitleMobile"
+                        text="{firstName} {lastName}"
+                    />
+                </snappedTitleOnMobile>
+
+                <navigationActions>
+                    <m:Button
+                        id="btnNavBack"
+                        type="Transparent"
+                        icon="sap-icon://nav-back"
+                        tooltip="{i18n>back}"
+                        press=".onNavBack"
+                    />
+                </navigationActions>
+
+                <actions>
+                    <m:Button
+                        id="btnEditEmployee"
+                        text="{i18n>edit}"
+                        type="Emphasized"
+                        press=".onOpenEditDialog"
+                    />
+                    <m:Button
+                        id="btnDeleteEmployee"
+                        text="{i18n>delete}"
+                        type="Transparent"
+                        press=".onDeleteEmployee"
+                    />
+                </actions>
+            </ObjectPageDynamicHeaderTitle>
+        </headerTitle>
+
+        <headerContent>
+            <m:FlexBox
+                id="employeeHeaderContent"
+                wrap="Wrap"
+                alignItems="Start"
+            >
+                <m:Avatar
+                    id="employeeAvatar"
+                    initials="{= (${firstName} || '').charAt(0) + (${lastName} || '').charAt(0) }"
+                    backgroundColor="Accent6"
+                    displaySize="L"
+                    class="sapUiTinyMarginEnd"
+                />
+
+                <layout:VerticalLayout
+                    id="headerColumnContact"
+                    class="sapUiSmallMarginBeginEnd"
+                >
+                    <m:ObjectStatus
+                        id="statusEmail"
+                        title="{i18n>email}"
+                        text="{email}"
+                    />
+                    <m:ObjectStatus
+                        id="statusDateOfBirth"
+                        title="{i18n>dateOfBirth}"
+                        text="{
+                            path: 'dateOfBirth',
+                            type: 'sap.ui.model.type.Date',
+                            formatOptions: { pattern: 'dd.MM.yyyy', UTC: true }
+                        }"
+                    />
+                </layout:VerticalLayout>
+
+                <layout:VerticalLayout
+                    id="headerColumnOrg"
+                    class="sapUiSmallMarginBeginEnd"
+                >
+                    <m:ObjectStatus
+                        id="statusDepartment"
+                        title="{i18n>department}"
+                        text="{department/name}"
+                        state="Information"
+                    />
+                    <m:ObjectStatus
+                        id="statusExperience"
+                        title="{i18n>experience}"
+                        text="{experience}"
+                    />
+                </layout:VerticalLayout>
+
+                <layout:VerticalLayout
+                    id="headerColumnRating"
+                    class="sapUiSmallMarginBeginEnd"
+                >
+                    <layout:layoutData>
+                        <ObjectPageHeaderLayoutData
+                            id="headerColumnRatingLayoutData"
+                            visibleS="false"
+                            visibleM="false"
+                        />
+                    </layout:layoutData>
+                    <m:Label
+                        id="lblAverageRating"
+                        text="{i18n>averageRating}"
+                    />
+                    <m:RatingIndicator
+                        id="employeeRating"
+                        maxValue="5"
+                        value="{detail>/averageRating}"
+                        editable="false"
+                        tooltip="{i18n>averageRating}"
+                    />
+                </layout:VerticalLayout>
+            </m:FlexBox>
+        </headerContent>
+
+        <sections>
+            <ObjectPageSection
+                id="sectionGeneral"
+                title="{i18n>generalInformation}"
+                titleUppercase="false"
+            >
+                <subSections>
+                    <ObjectPageSubSection
+                        id="subSectionPersonal"
+                        title="{i18n>personalDetails}"
+                        titleUppercase="false"
+                    >
+                        <blocks>
+                            <form:SimpleForm
+                                id="employeeDetailForm"
+                                editable="false"
+                                layout="ColumnLayout"
+                                columnsM="2"
+                                columnsL="2"
+                                columnsXL="2"
+                            >
+                                <m:Label
+                                    id="lblDetailFirstName"
+                                    text="{i18n>firstName}"
+                                />
+                                <m:Text
+                                    id="txtDetailFirstName"
+                                    text="{firstName}"
+                                />
+
+                                <m:Label
+                                    id="lblDetailLastName"
+                                    text="{i18n>lastName}"
+                                />
+                                <m:Text
+                                    id="txtDetailLastName"
+                                    text="{lastName}"
+                                />
+
+                                <m:Label
+                                    id="lblDetailEmail"
+                                    text="{i18n>email}"
+                                />
+                                <m:Link
+                                    id="lnkDetailEmail"
+                                    text="{email}"
+                                    href="mailto:{email}"
+                                />
+
+                                <m:Label
+                                    id="lblDetailDateOfBirth"
+                                    text="{i18n>dateOfBirth}"
+                                />
+                                <m:Text
+                                    id="txtDetailDateOfBirth"
+                                    text="{
+                                        path: 'dateOfBirth',
+                                        type: 'sap.ui.model.type.Date',
+                                        formatOptions: { pattern: 'dd.MM.yyyy', UTC: true }
+                                    }"
+                                />
+
+                                <m:Label
+                                    id="lblDetailExperience"
+                                    text="{i18n>experience}"
+                                />
+                                <m:Text
+                                    id="txtDetailExperience"
+                                    text="{experience}"
+                                />
+
+                                <m:Label
+                                    id="lblDetailDepartment"
+                                    text="{i18n>department}"
+                                />
+                                <m:Text
+                                    id="txtDetailDepartment"
+                                    text="{department/name}"
+                                />
+                            </form:SimpleForm>
+                        </blocks>
+                    </ObjectPageSubSection>
+                </subSections>
+            </ObjectPageSection>
+
+            <ObjectPageSection
+                id="sectionSkills"
+                title="{i18n>skillsSection}"
+                titleUppercase="false"
+            >
+                <subSections>
+                    <ObjectPageSubSection
+                        id="subSectionSkills"
+                        titleUppercase="false"
+                    >
+                        <blocks>
+                            <m:Table
+                                id="employeeSkillsTable"
+                                items="{skills}"
+                                mode="None"
+                            >
+                                <m:headerToolbar>
+                                    <m:Toolbar id="skillsToolbar">
+                                        <m:Title
+                                            id="skillsTableTitle"
+                                            text="Skills"
+                                        />
+                                        <m:ToolbarSpacer
+                                            id="skillsToolbarSpacer"
+                                        />
+                                        <m:Button
+                                            id="btnAddSkill"
+                                            text="Add Skill"
+                                            icon="sap-icon://add"
+                                            press=".onAddSkillDialog"
+                                        />
+                                    </m:Toolbar>
+                                </m:headerToolbar>
+                                <m:columns>
+                                    <m:Column id="colSkillName">
+                                        <m:Text
+                                            id="colSkillNameText"
+                                            text="Skill"
+                                        />
+                                    </m:Column>
+                                    <m:Column id="colSkillRating">
+                                        <m:Text
+                                            id="colSkillRatingText"
+                                            text="Rating"
+                                        />
+                                    </m:Column>
+                                    <m:Column
+                                        id="colSkillLastUsed"
+                                        minScreenWidth="Tablet"
+                                        demandPopin="true"
+                                    >
+                                        <m:Text
+                                            id="colSkillLastUsedText"
+                                            text="Last used"
+                                        />
+                                    </m:Column>
+                                    <m:Column
+                                        id="colSkillActions"
+                                        hAlign="End"
+                                    >
+                                        <m:Text
+                                            id="colSkillActionsText"
+                                            text=""
+                                        />
+                                    </m:Column>
+                                </m:columns>
+                                <m:items>
+                                    <m:ColumnListItem id="skillRow">
+                                        <m:cells>
+                                            <m:ObjectIdentifier
+                                                id="skillNameCell"
+                                                title="{skill/name}"
+                                                text="{skill/description}"
+                                            />
+                                            <m:RatingIndicator
+                                                id="skillRatingCell"
+                                                maxValue="5"
+                                                value="{rating}"
+                                                change=".onRatingChange"
+                                            />
+                                            <m:ObjectStatus
+                                                id="skillLastUsedCell"
+                                                text="{ path: 'lastUsed', type: 'sap.ui.model.type.Date',
+                            formatOptions: { pattern: 'dd.MM.yyyy', UTC: true } }"
+                                                state="{ path: 'lastUsed', formatter: '.formatFreshness' }"
+                                            />
+                                            <m:HBox
+                                                id="skillActionsCell"
+                                                justifyContent="End"
+                                            >
+                                                <m:Button
+                                                    id="btnEditSkill"
+                                                    icon="sap-icon://edit"
+                                                    type="Transparent"
+                                                    tooltip="{i18n>editSkill}"
+                                                    press=".onEditSkillDialog"
+                                                />
+                                                <m:Button
+                                                    id="btnDeleteSkill"
+                                                    icon="sap-icon://delete"
+                                                    type="Transparent"
+                                                    tooltip="{i18n>delete}"
+                                                    press=".onDeleteSkill"
+                                                />
+                                            </m:HBox>
+                                        </m:cells>
+                                    </m:ColumnListItem>
+                                </m:items>
+                                <m:noData>
+                                    <m:IllustratedMessage
+                                        id="skillsNoData"
+                                        illustrationType="sapIllus-NoTasks"
+                                        title="{i18n>noSkillsAssigned}"
+                                        illustrationSize="Spot"
+                                    />
+                                </m:noData>
+                            </m:Table>
+                        </blocks>
+                    </ObjectPageSubSection>
+                </subSections>
+            </ObjectPageSection>
+
+            <ObjectPageSection
+                id="sectionReviews"
+                title="{i18n>reviewsSection}"
+                titleUppercase="false"
+            >
+                <subSections>
+                    <ObjectPageSubSection
+                        id="subSectionReviews"
+                        titleUppercase="false"
+                    >
+                        <blocks>
+                            <m:List
+                                id="employeeReviewsList"
+                                items="{reviews}"
+                            >
+                                <m:CustomListItem id="reviewRow">
+                                    <m:VBox
+                                        id="reviewBox"
+                                        class="sapUiSmallMargin"
+                                    >
+                                        <m:HBox
+                                            id="reviewHeader"
+                                            alignItems="Center"
+                                        >
+                                            <m:Title
+                                                id="reviewTitle"
+                                                text="{title}"
+                                                level="H4"
+                                            />
+                                            <m:RatingIndicator
+                                                id="reviewStars"
+                                                maxValue="5"
+                                                value="{stars}"
+                                                editable="false"
+                                                class="sapUiSmallMarginBegin"
+                                            />
+                                        </m:HBox>
+                                        <m:Text
+                                            id="reviewContent"
+                                            text="{content}"
+                                            class="sapUiTinyMarginTop"
+                                        />
+                                    </m:VBox>
+                                </m:CustomListItem>
+                                <m:noData>
+                                    <m:IllustratedMessage
+                                        id="reviewsNoData"
+                                        illustrationType="sapIllus-NoMail"
+                                        title="{i18n>noReviews}"
+                                        illustrationSize="Spot"
+                                    />
+                                </m:noData>
+                            </m:List>
+                        </blocks>
+                    </ObjectPageSubSection>
+                </subSections>
+            </ObjectPageSection>
+        </sections>
+    </ObjectPageLayout>
+</mvc:View>

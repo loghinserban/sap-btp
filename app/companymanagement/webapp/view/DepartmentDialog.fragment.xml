@@ -1,0 +1,64 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form"
+>
+    <Dialog
+        id="departmentDialog"
+        title="{i18n>createDepartment}"
+        contentWidth="30rem"
+        draggable="true"
+        afterClose=".onDepartmentDialogClosed"
+    >
+        <content>
+            <form:SimpleForm
+                id="addDepartmentForm"
+                layout="ColumnLayout"
+                columnsM="1"
+                columnsL="1"
+                columnsXL="1"
+                editable="true"
+            >
+                <Label
+                    id="lblDepartmentName"
+                    text="{i18n>departmentName}"
+                    required="true"
+                />
+                <Input
+                    id="departmentName"
+                    maxLength="100"
+                    liveChange=".onRequiredFieldLiveChange"
+                />
+
+                <Label
+                    id="lblDepartmentDescription"
+                    text="{i18n>departmentDescription}"
+                />
+                <TextArea
+                    id="departmentDescription"
+                    maxLength="255"
+                    rows="3"
+                    growing="true"
+                    width="100%"
+                />
+            </form:SimpleForm>
+        </content>
+
+        <beginButton>
+            <Button
+                id="btnSubmitDepartment"
+                text="{i18n>createDepartment}"
+                press=".onAddDepartment"
+                type="Emphasized"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancelDepartment"
+                text="{i18n>cancel}"
+                press=".onCloseDepartmentDialog"
+                type="Transparent"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

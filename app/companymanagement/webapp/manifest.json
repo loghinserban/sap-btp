@@ -17,11 +17,19 @@
     },
     "dataSources": {
       "mainService": {
-        "uri": "/odata/v4/app/",
+        "uri": "/odata/v4/catalog/",
         "type": "OData",
         "settings": {
           "annotations": [],
           "odataVersion": "4.0"
+        }
+      },
+      "mainServiceV2": {
+        "uri": "/v2/odata/v4/catalog/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "odataVersion": "2.0"
         }
       }
     },
@@ -56,12 +64,15 @@
     }
   },
   "sap.ui5": {
-    "flexEnabled": true,
+    "flexEnabled": false,
     "dependencies": {
       "minUI5Version": "1.150.0",
       "libs": {
         "sap.m": {},
-        "sap.ui.core": {}
+        "sap.ui.core": {},
+        "sap.ui.comp": {},
+        "sap.ui.layout": {},
+        "sap.uxap": {}
       }
     },
     "contentDensities": {
@@ -76,6 +87,15 @@
         }
       },
       "": {
+        "dataSource": "mainServiceV2",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "v4": {
         "dataSource": "mainService",
         "preload": true,
         "settings": {
@@ -111,12 +131,23 @@
           "target": [
             "TargetView"
           ]
+        },
+        {
+          "name": "RouteDetail",
+          "pattern": "detail/{param}",
+          "target": [
+            "TargetDetail"
+          ]
         }
       ],
       "targets": {
         "TargetView": {
           "id": "View",
           "name": "View"
+        },
+        "TargetDetail": {
+          "id": "Detail",
+          "name": "Detail"
         }
       }
     },
