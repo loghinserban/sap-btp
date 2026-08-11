@@ -2,8 +2,10 @@ sap.ui.define([
     "companymanagement/controller/BaseController",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
-    "sap/m/MessageBox"
-], (BaseController, JSONModel, MessageToast, MessageBox) => {
+    "sap/m/MessageBox",
+    "sap/ui/core/routing/History",
+    "sap/ui/core/UIComponent"
+], (BaseController, JSONModel, MessageToast, MessageBox, History, UIComponent) => {
     "use strict";
 
     return BaseController.extend("companymanagement.controller.Detail", {
@@ -19,7 +21,6 @@ sap.ui.define([
         _onMatched(oEvent) {
             const sId = oEvent.getParameter("arguments").param;
 
-            // OData V2 addresses Edm.Guid keys as guid'<uuid>'
             this.getView().bindElement({
                 path: `/Employees(guid'${sId}')`,
                 parameters: {
@@ -36,7 +37,7 @@ sap.ui.define([
             const aReviews = (oContext && oContext.getProperty("reviews")) || [];
             const oModel = this.getODataModel();
 
-            // V2 returns expanded 1:n entries as an array of entity paths
+
             const aStars = aReviews
                 .map((vReview) => {
                     const oReview = typeof vReview === "string"
@@ -53,10 +54,7 @@ sap.ui.define([
             this.getView().getModel("detail").setProperty("/averageRating", fAverage);
         },
 
-        // ---------------------------------------------------------------
-        // Edit
-        // ---------------------------------------------------------------
-
+        //edit
         onOpenEditDialog() {
             const oContext = this.getView().getBindingContext();
 
@@ -100,10 +98,7 @@ sap.ui.define([
             });
         },
 
-        // ---------------------------------------------------------------
-        // Delete / navigation
-        // ---------------------------------------------------------------
-
+        //delete nav
         onDeleteEmployee() {
             const oBundle = this.getResourceBundle();
             const oModel = this.getODataModel();
@@ -130,9 +125,17 @@ sap.ui.define([
             });
         },
 
-        onNavBack() {
-            this.getRouter().navTo("RouteView", {}, true);
+        onNavBack: function () {
+            const history = History.getInstance();
+            const previousHash = history.getPreviousHash();
+            if (previousHash !== undefined) {
+                window.history.go(-1);
+            } else {
+                const router = UIComponent.getRouterFor(this);
+                router.navTo("RouteView", {}, true);
+            }
         },
+
 
         // SKILLS
 
@@ -268,18 +271,6 @@ sap.ui.define([
                     });
                 }
             });
-        },
-
-        // green under 1 year, yellow 1-2 years, red over 2
-        formatFreshness: function (sLastUsed) {
-            if (!sLastUsed) {
-                return "None";
-            }
-            const iMonths = (new Date() - new Date(sLastUsed)) / (1000 * 60 * 60 * 24 * 30.44);
-            if (iMonths <= 12) {
-                return "Success";
-            }
-            return iMonths <= 24 ? "Warning" : "Error";
         }
 
     });

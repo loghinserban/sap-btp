@@ -1,0 +1,269 @@
+<mvc:View
+    controllerName="companymanagement.controller.Search"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form"
+    xmlns="sap.m"
+    height="100%"
+>
+    <Page
+        id="searchPage"
+        title="{i18n>searchPageTitle}"
+        showNavButton="true"
+        navButtonPress=".onNavBack"
+        class="sapUiResponsiveContentPadding"
+        titleAlignment="Center"
+    >
+        <content>
+            <VBox id="searchHero">
+                <Label
+                    id="lblSearchSkills"
+                    text="{i18n>searchSkillsLabel}"
+                    design="Bold"
+                />
+                <MultiComboBox
+                    id="searchSkills"
+                    width="100%"
+                    placeholder="{i18n>searchSkillsPlaceholder}"
+                    items="{ path: '/Skills', sorter: { path: 'name' } }"
+                    selectionChange=".onFilterChange"
+                    selectionFinish=".onFilterChange"
+                >
+                    <items>
+                        <core:Item
+                            key="{ID}"
+                            text="{name}"
+                        />
+                    </items>
+                </MultiComboBox>
+
+                <SearchField
+                    id="searchQuery"
+                    width="100%"
+                    placeholder="{i18n>searchFreeTextPlaceholder}"
+                    liveChange=".onFilterChange"
+                    search=".onSearch"
+                    class="sapUiSmallMarginTop"
+                />
+            </VBox>
+
+            <OverflowToolbar id="searchRefineToolbar">
+                <Label
+                    id="lblSearchMinRating"
+                    text="{i18n>searchMinRating}"
+                />
+                <SegmentedButton
+                    id="searchMinRating"
+                    selectedKey="1"
+                    selectionChange=".onFilterChange"
+                >
+                    <items>
+                        <SegmentedButtonItem id="lvlAny" key="1" text="{i18n>ratingAny}" />
+                        <SegmentedButtonItem id="lvl3" key="3" text="{i18n>rating3}" />
+                        <SegmentedButtonItem id="lvl4" key="4" text="{i18n>rating4}" />
+                        <SegmentedButtonItem id="lvl5" key="5" text="{i18n>rating5}" />
+                    </items>
+                </SegmentedButton>
+
+                <ToolbarSeparator id="searchRefineSeparator" />
+
+                <Label
+                    id="lblSearchFreshness"
+                    text="{i18n>searchFreshness}"
+                />
+                <SegmentedButton
+                    id="searchFreshness"
+                    selectedKey="0"
+                    selectionChange=".onFilterChange"
+                >
+                    <items>
+                        <SegmentedButtonItem id="frAny" key="0" text="{i18n>freshnessAny}" />
+                        <SegmentedButtonItem id="fr12" key="12" text="{i18n>freshnessGreen}" />
+                        <SegmentedButtonItem id="fr24" key="24" text="{i18n>freshnessYellow}" />
+                    </items>
+                </SegmentedButton>
+
+                <ToolbarSpacer id="searchRefineSpacer" />
+
+                <Button
+                    id="btnClearSearch"
+                    text="{i18n>clear}"
+                    type="Transparent"
+                    icon="sap-icon://clear-filter"
+                    press=".onClearFilters"
+                />
+            </OverflowToolbar>
+
+            <Panel
+                id="searchMorePanel"
+                headerText="{i18n>moreFilters}"
+                expandable="true"
+                expanded="false"
+            >
+                <form:SimpleForm
+                    id="searchMoreForm"
+                    layout="ColumnLayout"
+                    columnsM="2"
+                    columnsL="2"
+                    columnsXL="2"
+                    editable="true"
+                >
+                    <Label
+                        id="lblSearchDepartment"
+                        text="{i18n>department}"
+                    />
+                    <ComboBox
+                        id="searchDepartment"
+                        width="100%"
+                        placeholder="{i18n>searchAnyDepartment}"
+                        items="{ path: '/Departments', sorter: { path: 'name' } }"
+                        selectionChange=".onFilterChange"
+                    >
+                        <items>
+                            <core:Item
+                                key="{ID}"
+                                text="{name}"
+                            />
+                        </items>
+                    </ComboBox>
+
+                    <Label
+                        id="lblSearchMinExperience"
+                        text="{i18n>searchMinExperience}"
+                    />
+                    <Input
+                        id="searchMinExperience"
+                        type="Number"
+                        placeholder="{i18n>anyValue}"
+                        liveChange=".onFilterChange"
+                    />
+
+                    <Label
+                        id="lblSearchMinAge"
+                        text="{i18n>searchAgeFrom}"
+                    />
+                    <Input
+                        id="searchMinAge"
+                        type="Number"
+                        placeholder="{i18n>anyValue}"
+                        liveChange=".onFilterChange"
+                    />
+
+                    <Label
+                        id="lblSearchMaxAge"
+                        text="{i18n>searchAgeTo}"
+                    />
+                    <Input
+                        id="searchMaxAge"
+                        type="Number"
+                        placeholder="{i18n>anyValue}"
+                        liveChange=".onFilterChange"
+                    />
+                </form:SimpleForm>
+            </Panel>
+
+            <Table
+                id="searchResultsTable"
+                items="{search>/results}"
+                busy="{search>/busy}"
+                mode="SingleSelectMaster"
+                selectionChange=".onResultPress"
+                growing="true"
+                growingThreshold="25"
+                class="sapUiSmallMarginTop"
+            >
+                <headerToolbar>
+                    <OverflowToolbar id="searchResultsToolbar">
+                        <Title
+                            id="searchResultsTitle"
+                            text="{i18n>searchResults} ({= ${search>/results}.length })"
+                        />
+                        <ToolbarSpacer id="searchResultsSpacer" />
+                        <Text
+                            id="searchPartialHint"
+                            text="{i18n>partialHint}"
+                            visible="{search>/hasPartial}"
+                        />
+                    </OverflowToolbar>
+                </headerToolbar>
+
+                <columns>
+                    <Column id="colMatch" width="8rem">
+                        <Text id="colMatchText" text="{i18n>colMatch}" />
+                    </Column>
+                    <Column id="colName">
+                        <Text id="colNameText" text="{i18n>employeeName}" />
+                    </Column>
+                    <Column id="colSkills">
+                        <Text id="colSkillsText" text="{i18n>colSkills}" />
+                    </Column>
+                    <Column id="colDepartment" demandPopin="true">
+                        <Text id="colDepartmentText" text="{i18n>department}" />
+                    </Column>
+                    <Column id="colExperience" hAlign="End" demandPopin="true" width="7rem">
+                        <Text id="colExperienceText" text="{i18n>experience}" />
+                    </Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem
+                        id="searchResultItem"
+                        type="Navigation"
+                    >
+                        <cells>
+                            <VBox id="cellMatch">
+                                <ObjectNumber
+                                    id="cellScore"
+                                    number="{search>score}"
+                                    state="{search>worstFreshness}"
+                                    emphasized="true"
+                                />
+                                <Text
+                                    id="cellCoverage"
+                                    text="{search>coverageText}"
+                                    class="sapUiTinyMarginTop"
+                                />
+                            </VBox>
+
+                            <ObjectIdentifier
+                                id="cellName"
+                                title="{search>fullName}"
+                                text="{search>email}"
+                            />
+
+                            <VBox
+                                id="cellSkills"
+                                items="{search>skills}"
+                            >
+                                <ObjectStatus
+                                    id="cellSkillStatus"
+                                    text="{search>label}"
+                                    state="{search>freshness}"
+                                    icon="{search>icon}"
+                                />
+                            </VBox>
+
+                            <Text
+                                id="cellDepartment"
+                                text="{search>departmentName}"
+                            />
+                            <Text
+                                id="cellExperience"
+                                text="{search>experience}"
+                            />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+
+                <noData>
+                    <IllustratedMessage
+                        id="searchNoData"
+                        illustrationType="{= ${search>/searched} ? 'sapIllus-NoSearchResults' : 'sapIllus-SearchEarth' }"
+                        title="{= ${search>/searched} ? ${i18n>noMatchesTitle} : ${i18n>startSearchTitle} }"
+                        description="{= ${search>/searched} ? ${i18n>noMatchesDescription} : ${i18n>startSearchDescription} }"
+                    />
+                </noData>
+            </Table>
+        </content>
+    </Page>
+</mvc:View>

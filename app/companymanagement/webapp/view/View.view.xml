@@ -8,9 +8,14 @@
 >
     <Page
         id="adminPage"
+        showHeader = "true"
         title="{i18n>adminPageTitle}"
-        enableScrolling="false"
+        enableScrolling="true"
         class="sapUiResponsiveContentPadding"
+        titleAlignment="Start"
+        titleLevel = "Auto"
+        showFooter = "true" 
+
     >
         <content>
             <VBox
@@ -34,12 +39,10 @@
                     useVariantManagement="false"
                     useTablePersonalisation="true"
                     enableAutoBinding="true"
-                    enableAutoColumnWidth="true"
                     enableCopy="false"
                     requestAtLeastFields="ID"
                     initiallyVisibleFields="firstName,lastName,email,department/name,experience,dateOfBirth"
                     beforeRebindTable=".onBeforeRebindTable"
-                    class="sapUiResponsiveContentPadding"
                 >
                     <smartTable:layoutData>
                         <FlexItemData
@@ -50,22 +53,64 @@
                     </smartTable:layoutData>
 
                     <smartTable:customToolbar>
-                        <OverflowToolbar id="employeeTableToolbar">
+                        <OverflowToolbar id="employeeTableToolbar" width="100%">
                             <ToolbarSpacer id="employeeTableToolbarSpacer" />
+
+                             <Button
+                            id = "btnSeedData"
+                            text = "{i18n>seedData}"
+                            type = "Transparent"
+                            icon = "sap-icon://download-from-cloud"
+                            press = ".onSeedData"
+                            >
+                            <layoutData>
+                            <OverflowToolbarLayoutData id = "btnSeedDataLayout" priority="Low"></OverflowToolbarLayoutData>
+                            </layoutData>
+                            </Button>
+                            <Button
+                                id="btnGoToSearch"
+                                text="{i18n>searchPageTitle}"
+                                type="Transparent"
+                                icon="sap-icon://search"
+                                press=".onNavToSearch"
+                            >
+                                <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnGoToSearchLayout"
+                                        priority="Low"
+                                    />
+                                </layoutData>
+                            </Button>
                             <Button
                                 id="btnCreateDepartment"
                                 text="{i18n>createDepartment}"
                                 type="Transparent"
                                 icon="sap-icon://add-folder"
                                 press=".onOpenDepartmentDialog"
-                            />
+                            >
+                                <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnCreateDepartmentLayout"
+                                        priority="Low"
+                                    />
+                                </layoutData>
+                            </Button>
                             <Button
                                 id="btnAddEmployee"
                                 text="{i18n>addEmployee}"
                                 type="Emphasized"
                                 icon="sap-icon://add-employee"
                                 press=".onOpenAddEmployeeDialog"
-                            />
+                            >
+                                <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnAddEmployeeLayout"
+                                        priority="High"
+                                    />
+                                </layoutData>
+                            </Button>
+
+                           
                         </OverflowToolbar>
                     </smartTable:customToolbar>
 
