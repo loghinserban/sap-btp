@@ -1,0 +1,38 @@
+<mvc:View
+  controllerName="sapbtp.controller.UserDetails"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  displayBlock="true">
+
+  <Page title="User Details" showNavButton="true" navButtonPress=".onNavBack">
+    <content>
+      <VBox class="sapUiResponsiveMargin">
+        <ObjectHeader
+          title="{view>/selectedUser/firstName}"
+          >
+          <attributes>
+            <ObjectAttribute title="Email" text="{view>/selectedUser/email}"/>
+            <ObjectAttribute title="Title" text="{view>/selectedUser/title}"/>
+            <ObjectAttribute title="Location" text="{view>/selectedUser/location}"/>
+          </attributes>
+        </ObjectHeader>
+
+        <Panel headerText="Skills" class="sapUiSmallMarginTop">
+          <List items="{view>/selectedUserSkills}">
+            <StandardListItem title="{view>skillName}" description="Level: {view>level}/5"/>
+          </List>
+        </Panel>
+
+        <Panel headerText="Reviews" class="sapUiSmallMarginTop">
+          <List items="{view>/selectedUserReviews}">
+            <ObjectListItem title="{view>reviewer}" intro="Rating: {view>rating}/5">
+              <attributes>
+                <ObjectAttribute text="{view>comment}"/>
+              </attributes>
+            </ObjectListItem>
+          </List>
+        </Panel>
+      </VBox>
+    </content>
+  </Page>
+</mvc:View>
