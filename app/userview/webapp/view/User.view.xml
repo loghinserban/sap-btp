@@ -1,6 +1,100 @@
-<mvc:View controllerName="userview.controller.User"
+<mvc:View
+    xmlns:cards="sap.f.cards"
+    controllerName="userview.controller.User"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m">
-    <Page id="page" title="{i18n>title}">
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m"
+>
+    <Page
+        id="page"
+        title="{i18n>title}"
+    >
+        <Panel>
+            <Title text="All Employees" />
+
+            <List
+                id="employeeList"
+                backgroundDesign="Translucent"
+                growing="true"
+                mode="SingleSelectMaster"
+                itemPress=".onItemPress"
+                items="{ path:'/Employees' }"
+            >
+                <headerToolbar>
+                    <Toolbar>
+                        <SearchField
+                            width="30%"
+                            search="onItemSearch"
+                            placeholder="Search a colleague"
+                        />
+                    </Toolbar>
+                </headerToolbar>
+                <items>
+                    <ObjectListItem
+                        title="{firstName} {lastName}"
+                        type="Active"
+                    />
+                </items>
+            </List>
+            <Title text="Add your skills" />
+            <VBox class="sapUiSmallMargin">
+                <Label text="Skill" />
+                <ComboBox
+                    id="cbSkill"
+                    items="{
+                path: '/Skills'
+                }"
+                    selectedKey="{skill_ID}"
+                    placeholder="Select skill"
+                >
+                    <items>
+                        <core:Item
+                            key="{ID}"
+                            text="{name}"
+                        />
+                    </items>
+                </ComboBox>
+
+                <Button
+                    text="Add Skill"
+                    type="Emphasized"
+                    press=".onAddSkill"
+                />
+            </VBox>
+
+            <Title text="Recommand a colleague" />
+
+            <VBox class="sapUiSmallMargin">
+                <Label text="Employee Name" />
+                <Input
+                    id="employeeName"
+                    placeholder=""
+                />
+
+                <Label text="Review Title" />
+                <Input
+                    id="reviewTitle"
+                    placeholder=""
+                />
+
+                <Label text="Content" />
+                <Input
+                    id="reviewContent"
+                    placeholder=""
+                />
+
+                <Label text="Stars" />
+                <Input
+                    id="reviewStars"
+                    placeholder=""
+                />
+
+                <Button
+                    text="Add Review"
+                    type="Emphasized"
+                    press=".onAddReview"
+                />
+            </VBox>
+        </Panel>
     </Page>
 </mvc:View>
