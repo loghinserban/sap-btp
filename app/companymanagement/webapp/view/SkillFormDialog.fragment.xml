@@ -1,0 +1,52 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form"
+>
+    <Dialog
+        id="skillFormDialog"
+        title="{i18n>createSkill}"
+        contentWidth="30rem"
+        draggable="true"
+    >
+        <content>
+            <form:SimpleForm
+                id="skillSimpleFormDialog"
+                layout="ColumnLayout"
+                columnsM="1"
+                columnsL="1"
+                columnsXL="1"
+                editable="true"
+            >
+                <Label id="lblSkillFormName" text="{i18n>skillName}" required="true" />
+                <Input id="skillFormName" maxLength="100" />
+
+                <Label id="lblSkillFormDescription" text="{i18n>departmentDescription}" />
+                <TextArea
+                    id="skillFormDescription"
+                    maxLength="255"
+                    rows="3"
+                    growing="true"
+                    width="100%"
+                />
+            </form:SimpleForm>
+        </content>
+
+        <beginButton>
+            <Button
+                id="btnSaveSkillForm"
+                text="{i18n>save}"
+                type="Emphasized"
+                press=".onSaveSkill"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancelSkillForm"
+                text="{i18n>cancel}"
+                type="Transparent"
+                press=".onCloseSkillDialog"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

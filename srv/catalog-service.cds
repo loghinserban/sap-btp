@@ -2,6 +2,7 @@ using db from '../db/schema';
 
 service CatalogService {
     action seedDemoData(count:Integer) returns String;
+    action reassingDepartment(fromID: UUID, toId: UUID) returns String; // daca as muta 30 de angajati din UI as face 30 de request uri. 
     entity Skills as projection on db.Skills;
     entity Departments as projection on db.Departments;
     entity Reviews as projection on db.Reviews;

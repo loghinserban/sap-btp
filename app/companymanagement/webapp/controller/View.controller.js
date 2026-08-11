@@ -52,6 +52,10 @@ sap.ui.define([
             this.getRouter().navTo("RouteSearch");
         },
 
+        onNavToMasterData() {
+            this.getRouter().navTo("RouteAdmin");
+        },
+
         //add employee
         onOpenAddEmployeeDialog() {
             return this.openEmployeeForm("add");

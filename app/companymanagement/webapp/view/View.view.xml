@@ -8,14 +8,13 @@
 >
     <Page
         id="adminPage"
-        showHeader = "true"
+        showHeader="true"
         title="{i18n>adminPageTitle}"
         enableScrolling="true"
         class="sapUiResponsiveContentPadding"
         titleAlignment="Start"
-        titleLevel = "Auto"
-        showFooter = "true" 
-
+        titleLevel="Auto"
+        showFooter="true"
     >
         <content>
             <VBox
@@ -53,19 +52,40 @@
                     </smartTable:layoutData>
 
                     <smartTable:customToolbar>
-                        <OverflowToolbar id="employeeTableToolbar" width="100%">
+                        <OverflowToolbar
+                            id="employeeTableToolbar"
+                            width="100%"
+                        >
                             <ToolbarSpacer id="employeeTableToolbarSpacer" />
 
-                             <Button
-                            id = "btnSeedData"
-                            text = "{i18n>seedData}"
-                            type = "Transparent"
-                            icon = "sap-icon://download-from-cloud"
-                            press = ".onSeedData"
+                            <Button
+                                id="btnMasterData"
+                                text="{i18n>masterDataTitle}"
+                                type="Transparent"
+                                icon="sap-icon://settings"
+                                press=".onNavToMasterData"
                             >
-                            <layoutData>
-                            <OverflowToolbarLayoutData id = "btnSeedDataLayout" priority="Low"></OverflowToolbarLayoutData>
-                            </layoutData>
+                                <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnMasterDataLayout"
+                                        priority="Low"
+                                    />
+                                </layoutData>
+                            </Button>
+
+                            <Button
+                                id="btnSeedData"
+                                text="{i18n>seedData}"
+                                type="Transparent"
+                                icon="sap-icon://download-from-cloud"
+                                press=".onSeedData"
+                            >
+                                <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnSeedDataLayout"
+                                        priority="Low"
+                                    />
+                                </layoutData>
                             </Button>
                             <Button
                                 id="btnGoToSearch"
@@ -109,8 +129,6 @@
                                     />
                                 </layoutData>
                             </Button>
-
-                           
                         </OverflowToolbar>
                     </smartTable:customToolbar>
 

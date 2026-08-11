@@ -1,4 +1,4 @@
-const cds = require ('@sap/cds');
+const cds = require('@sap/cds');
 
 module.exports = (srv) => {
   const { Employees, EmployeeSkills, Departments, Skills } = srv.entities;
@@ -13,7 +13,6 @@ module.exports = (srv) => {
     );
     const { results } = await res.json();
 
-    // your CSVs are already loaded — just read them back
     const depts = await SELECT.from(Departments).columns('ID');
     const skills = await SELECT.from(Skills).columns('ID');
 
@@ -26,12 +25,11 @@ module.exports = (srv) => {
         firstName: p.name.first,
         lastName: p.name.last,
         email: p.email,
-        dateOfBirth: p.dob.date.slice(0, 10),   // ISO -> Date
+        dateOfBirth: p.dob.date.slice(0, 10),
         experience: rand(15) + 1,
         department_ID: pick(depts).ID
       });
 
-      // 2-4 distinct skills per employee
       const some = [...skills].sort(() => Math.random() - 0.5).slice(0, 2 + rand(3));
       for (const s of some) {
         empSkills.push({
@@ -48,4 +46,44 @@ module.exports = (srv) => {
     await INSERT.into(EmployeeSkills).entries(empSkills);
     return `Inserted ${employees.length} employees`;
   });
+
+  srv.before('DELETE', 'Skills', async (req) => {
+    const sSkillId = req.data.ID;
+
+    const aUsed = await SELECT.from(EmployeeSkills)
+      .columns('ID')
+      .where({ skill_ID: sSkillId });
+
+    if (aUsed.length > 0) {
+      return req.reject(400, `Skill already attributed to  ${aUsed.length} employees . Delete it before`);
+    }
+  });
+
+  srv.before('DELETE', 'Departments', async (req) => {
+    const sDeptId = req.data.ID;
+
+    const aUsed = await SELECT.from(Employees)
+      .columns('ID')
+      .where({ department_ID: sDeptId });
+
+    if (aUsed.length > 0) {
+      return req.reject(400, `Department has  ${aUsed.length} employees. Move them to another department first`);
+    }
+  });
+
+  //reasignare si stergere departament
+
+  srv.on('reassignDepartment', async (req) => {
+    const { fromID, toID } = req.data;
+
+    if (!fromID || !toID || fromID === toID) {
+      return req.reject(400, 'Chose another department.');
+    }
+
+    await UPDATE(Employees).set({ department_ID: toID }).where({ department_ID: fromID });
+    await DELETE.from(Departments).where({ ID: fromID });
+
+    return 'Employees moves sucessfuly and department deleted';
+  });
+
 };
