@@ -9,6 +9,7 @@ sap.ui.define([
 
     const ValueState = coreLibrary.ValueState;
     const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
 
     const FIELD_IDS = [
         "formFirstName",
@@ -151,6 +152,45 @@ sap.ui.define([
             oDatePicker.setValueState(
                 !bValid || (oDate && oDate > new Date()) ? ValueState.Error : ValueState.None
             );
+        },
+
+
+        // Cate luni au trecut de la o data. null daca data lipseste.
+        monthsSince(sDate) {
+            if (!sDate) {
+                return null;
+            }
+            return Math.floor((new Date() - new Date(sDate)) / MS_PER_MONTH);
+        },
+
+        calculateAge(sDateOfBirth) {
+            if (!sDateOfBirth) {
+                return null;
+            }
+
+            const oBirth = new Date(sDateOfBirth);
+            const oToday = new Date();
+            let iAge = oToday.getFullYear() - oBirth.getFullYear();
+            const iMonthDiff = oToday.getMonth() - oBirth.getMonth();
+
+            if (iMonthDiff < 0 || (iMonthDiff === 0 && oToday.getDate() < oBirth.getDate())) {
+                iAge--;
+            }
+
+            return iAge;
+        },
+
+        // green under 1 year, yellow 1-2 years, red over 2
+        formatFreshness(sLastUsed) {
+            const iMonths = this.monthsSince(sLastUsed);
+
+            if (iMonths === null) {
+                return ValueState.None;
+            }
+            if (iMonths <= 12) {
+                return ValueState.Success;
+            }
+            return iMonths <= 24 ? ValueState.Warning : ValueState.Error;
         }
     });
 });

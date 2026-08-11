@@ -9,7 +9,6 @@ sap.ui.define([
 
     const ValueState = coreLibrary.ValueState;
 
-    // Fields the free-text search box matches against
     const BASIC_SEARCH_FIELDS = ["firstName", "lastName", "email"];
 
     return BaseController.extend("companymanagement.controller.View", {
@@ -18,18 +17,7 @@ sap.ui.define([
             this._oDepartmentDialog = null;
         },
 
-        // ---------------------------------------------------------------
-        // List report
-        // ---------------------------------------------------------------
-
-        /**
-         * The Department column reads department/name, so the association has to be
-         * expanded on every rebind - including the ones the SmartFilterBar triggers.
-         *
-         * The basic search value is not applied automatically either: SmartFilterBar
-         * only exposes it, so it becomes an OR filter over the name/email fields,
-         * AND-ed with whatever the field filters already produced.
-         */
+        //list report
         onBeforeRebindTable(oEvent) {
             const mBindingParams = oEvent.getParameter("bindingParams");
 
@@ -55,16 +43,34 @@ sap.ui.define([
             if (!oContext) {
                 return;
             }
+            oEvent.getSource().removeSelections(true);
 
             this.getRouter().navTo("RouteDetail", { param: oContext.getProperty("ID") });
         },
 
-        // ---------------------------------------------------------------
-        // Add employee
-        // ---------------------------------------------------------------
+        onNavToSearch() {
+            this.getRouter().navTo("RouteSearch");
+        },
 
+        //add employee
         onOpenAddEmployeeDialog() {
             return this.openEmployeeForm("add");
+        },
+
+        async onSeedData() {
+            try {
+                const oRes = await fetch("/odata/v4/catalog/seedDemoData", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ count: 25 })
+                });
+                if (!oRes.ok) { throw new Error(await oRes.text()); }
+                const oData = await oRes.json();
+                MessageToast.show(oData.value);
+                this.byId("employeeSmartTable").rebindTable();
+            } catch (e) {
+                MessageToast.show("Seeding failed: " + e.message);
+            }
         },
 
         onCloseEmployeeForm() {
@@ -92,11 +98,7 @@ sap.ui.define([
                 }
             });
         },
-
-        // ---------------------------------------------------------------
-        // Create department
-        // ---------------------------------------------------------------
-
+        //create department
         async onOpenDepartmentDialog() {
             this._oDepartmentDialog ??= await this.loadFragment({
                 name: "companymanagement.view.DepartmentDialog"

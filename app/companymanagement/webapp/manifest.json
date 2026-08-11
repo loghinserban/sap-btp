@@ -3,7 +3,13 @@
   "sap.app": {
     "id": "companymanagement",
     "type": "application",
-    "i18n": "i18n/i18n.properties",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [
+        ""
+      ],
+      "fallbackLocale": ""
+    },
     "applicationVersion": {
       "version": "0.0.1"
     },
@@ -83,7 +89,11 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "companymanagement.i18n.i18n"
+          "bundleName": "companymanagement.i18n.i18n",
+          "supportedLocales": [
+            ""
+          ],
+          "fallbackLocale": ""
         }
       },
       "": {
@@ -126,17 +136,24 @@
       },
       "routes": [
         {
-          "name": "RouteView",
-          "pattern": ":?query:",
-          "target": [
-            "TargetView"
-          ]
-        },
-        {
           "name": "RouteDetail",
           "pattern": "detail/{param}",
           "target": [
             "TargetDetail"
+          ]
+        },
+        {
+          "name": "RouteSearch",
+          "pattern": "search",
+          "target": [
+            "TargetSearch"
+          ]
+        },
+        {
+          "name": "RouteView",
+          "pattern": ":?query:",
+          "target": [
+            "TargetView"
           ]
         }
       ],
@@ -148,6 +165,10 @@
         "TargetDetail": {
           "id": "Detail",
           "name": "Detail"
+        },
+        "TargetSearch": {
+          "id": "Search",
+          "name": "Search"
         }
       }
     },

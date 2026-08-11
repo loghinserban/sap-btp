@@ -1,38 +1,47 @@
 namespace db;
-using {cuid, managed} from '@sap/cds/common';
 
-entity Skills: cuid{
-    name : String(100);
-    description: String(255);
-}
+using {
+    cuid,
+    managed
+} from '@sap/cds/common';
 
-entity Departments : cuid{
-    name : String(100);
+entity Skills : cuid {
+    name        : String(100);
     description : String(255);
 }
 
-entity Reviews : cuid{
-    title : String(100);
-    content : String(255);
-    stars : Integer;
-    employee: Association to Employees;
+entity Departments : cuid {
+    name        : String(100);
+    description : String(255);
 }
 
-entity EmployeeSkills : cuid{
+entity Reviews : cuid {
+    title    : String(100);
+    content  : String(255);
+    stars    : Integer;
     employee : Association to Employees;
-    skill: Association to Skills;
-    rating : Integer @assert.range: {minimum: 1, maximum: 5};
-    lastUsed: Date;
 }
 
-entity Employees:cuid{
-    firstName: String(100);
-    lastName: String(100);
-    dateOfBirth: Date;
+entity EmployeeSkills : cuid {
+    employee : Association to Employees;
+    skill    : Association to Skills;
+    rating   : Integer @assert.range: {
+        minimum: 1,
+        maximum: 5
+    };
+    lastUsed : Date;
+}
+
+entity Employees : cuid {
+    firstName   : String(100);
+    lastName    : String(100);
+    dateOfBirth : Date;
     //age:Integer;
-    email : String(100);
-    experience: Integer;
-    skills: Composition of many EmployeeSkills on skills.employee=$self;
-    department: Association to Departments;
-    reviews: Composition of many Reviews on reviews.employee =$self;
+    email       : String(100);
+    experience  : Integer;
+    skills      : Composition of many EmployeeSkills
+                      on skills.employee = $self;
+    department  : Association to Departments;
+    reviews     : Composition of many Reviews
+                      on reviews.employee = $self;
 }
