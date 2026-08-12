@@ -1,9 +1,6 @@
 <mvc:View
-    xmlns:cards="sap.f.cards"
     controllerName="userview.controller.User"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns:smartFilterBar="sap.ui.comp.smartfilterbar"
-    xmlns:smartTable="sap.ui.comp.smarttable"
     xmlns:core="sap.ui.core"
     xmlns="sap.m"
     xmlns:f="sap.f"
@@ -50,25 +47,31 @@
                     >
                         <VBox class="sapUiSmallMargin">
                             <ObjectIdentifier
-                                title="{view>/currentUser/firstName}"
-                                text="{view>/currentUser/lastName}"
+                                title="{firstName} {lastName}"
+                                text="{email}"
                             />
-                            <Text text="First Name: {/loggedUser/firstName}" />
-                            <Text text="Last Name: {/loggedUser/lastName}" />
-                            <Text text="Email: {/loggedUser/email}" />
-                            <Text text="Experience: {/loggedUser/experience}" />
+                            <Text text="First Name: {firstName}" />
+                            <Text text="Last Name: {lastName}" />
+                            <Text text="Email: {email}" />
+                            <Text text="Experience: {experience}" />
                             <Text
-                                text="Date of birth: {/loggedUser/dateOfBirth}"
+                                text="Date of birth: {
+                                    path: 'dateOfBirth',
+                                    type: 'sap.ui.model.type.Date',
+                                    formatOptions: { pattern: 'dd.MM.yyyy', UTC: true }
+                                }"
                             />
+                            <Text text="Department: {department/name}" />
+
                             <Title
                                 text="Skills"
                                 level="H5"
                                 class="sapUiSmallMarginTop"
                             />
-                            <List items="{view>/Skills}">
+                            <List items="{skills}">
                                 <StandardListItem
-                                    title="{view>name}"
-                                    description="Description: {view>description}"
+                                    title="{skill/name}"
+                                    description="Rating: {rating}/5 | Last Used: { path: 'lastUsed', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'dd.MM.yyyy', UTC: true } }"
                                 />
                             </List>
                         </VBox>
@@ -78,29 +81,25 @@
                         headerText="My Reviews"
                         class="sapUiResponsiveMargin"
                     >
-                        <List items="{view>/Reviews}">
+                        <List items="{reviews}">
                             <ObjectListItem
-                                title="{view>title}"
-                                intro="Rating: {view>stars}/5"
-                                number="{view>stars}"
+                                title="{title}"
+                                intro="Rating: {stars}/5"
+                                number="{stars}"
                                 numberUnit="★"
                             >
-                                <firstStatus>
-                                    <ObjectStatus text="{view>employee}" />
-                                </firstStatus>
                                 <attributes>
-                                    <ObjectAttribute text="{view>content}" />
+                                    <ObjectAttribute text="{content}" />
                                 </attributes>
                             </ObjectListItem>
                         </List>
                     </Panel>
                 </l:Grid>
 
-
                 <VBox class="sapUiMediumMarginTop">
                     <SearchField
                         width="100%"
-                        placeholder="Search users by name, email, skills..."
+                        placeholder="Search users by name, email..."
                         liveChange=".onUserSearch"
                         search=".onUserSearch"
                     />
@@ -112,21 +111,11 @@
                         class="sapUiSmallMarginTop"
                     >
                         <columns>
-                            <Column>
-                                <Text text="First Name" />
-                            </Column>
-                            <Column>
-                                <Text text="Last Name" />
-                            </Column>
-                            <Column>
-                                <Text text="Email" />
-                            </Column>
-                            <Column>
-                                <Text text="Experience" />
-                            </Column>
-                            <Column>
-                                <Text text="Date of birth" />
-                            </Column>
+                            <Column><Text text="First Name" /></Column>
+                            <Column><Text text="Last Name" /></Column>
+                            <Column><Text text="Email" /></Column>
+                            <Column><Text text="Experience" /></Column>
+                            <Column><Text text="Date of birth" /></Column>
                         </columns>
                         <items>
                             <ColumnListItem
@@ -138,7 +127,13 @@
                                     <Text text="{lastName}" />
                                     <Text text="{email}" />
                                     <Text text="{experience}" />
-                                    <Text text="{dateOfBirth}" />
+                                    <Text
+                                        text="{
+                                            path: 'dateOfBirth',
+                                            type: 'sap.ui.model.type.Date',
+                                            formatOptions: { pattern: 'dd.MM.yyyy', UTC: true }
+                                        }"
+                                    />
                                 </cells>
                             </ColumnListItem>
                         </items>
@@ -146,92 +141,5 @@
                 </VBox>
             </VBox>
         </content>
-        <!-- <Panel>
-            <Title text="All Employees" />
-
-            <List
-                id="employeeList"
-                backgroundDesign="Translucent"
-                growing="true"
-                mode="SingleSelectMaster"
-                itemPress=".onItemPress"
-                items="{ path:'/Employees' }"
-            >
-                <headerToolbar>
-                    <Toolbar>
-                        <SearchField
-                            width="30%"
-                            search="onItemSearch"
-                            placeholder="Search a colleague"
-                        />
-                    </Toolbar>
-                </headerToolbar>
-                <items>
-                    <ObjectListItem
-                        title="{firstName} {lastName}"
-                        type="Active"
-                    />
-                </items>
-            </List>
-            <Title text="Add your skills" />
-            <VBox class="sapUiSmallMargin">
-                <Label text="Skill" />
-                <ComboBox
-                    id="cbSkill"
-                    items="{
-                path: '/Skills'
-                }"
-                    selectedKey="{skill_ID}"
-                    placeholder="Select skill"
-                >
-                    <items>
-                        <core:Item
-                            key="{ID}"
-                            text="{name}"
-                        />
-                    </items>
-                </ComboBox>
-
-                <Button
-                    text="Add Skill"
-                    type="Emphasized"
-                    press=".onAddSkill"
-                />
-            </VBox>
-
-            <Title text="Recommand a colleague" />
-
-            <VBox class="sapUiSmallMargin">
-                <Label text="Employee Name" />
-                <Input
-                    id="employeeName"
-                    placeholder=""
-                />
-
-                <Label text="Review Title" />
-                <Input
-                    id="reviewTitle"
-                    placeholder=""
-                />
-
-                <Label text="Content" />
-                <Input
-                    id="reviewContent"
-                    placeholder=""
-                />
-
-                <Label text="Stars" />
-                <Input
-                    id="reviewStars"
-                    placeholder=""
-                />
-
-                <Button
-                    text="Add Review"
-                    type="Emphasized"
-                    press=".onAddReview"
-                />
-            </VBox>
-        </Panel> -->
     </Page>
 </mvc:View>
