@@ -15,7 +15,7 @@
       "version": "1.30.0",
       "toolsId": "1302fe61-9755-4be4-b42f-ecd1a8fad154"
     },
-     "dataSources": {
+    "dataSources": {
       "mainService": {
         "uri": "/odata/v4/catalog/",
         "type": "OData",
@@ -69,7 +69,8 @@
       "minUI5Version": "1.150.1",
       "libs": {
         "sap.m": {},
-        "sap.ui.core": {}
+        "sap.ui.core": {},
+        "sap.ui.unified" : {}
       }
     },
     "contentDensities": {
@@ -92,7 +93,7 @@
           "earlyRequests": true
         }
       },
-    "v4": {
+      "v4": {
         "dataSource": "mainService",
         "preload": true,
         "settings": {
@@ -102,7 +103,6 @@
         }
       }
     },
-    
     "resources": {
       "css": [
         {
@@ -125,16 +125,16 @@
       "routes": [
         {
           "name": "RouteUser",
-          "pattern": ":?query:",
+          "pattern": "",
           "target": [
             "TargetUser"
           ]
         },
         {
           "name": "RouteDetail",
-          "pattern": "detail/{param}",
+          "pattern": "detail/{id}",
           "target": [
-            "TargetDetail"
+            "TargetUserDetails"
           ]
         }
       ],
@@ -143,9 +143,9 @@
           "id": "User",
           "name": "User"
         },
-         "TargetDetail": {
-          "id": "Detail",
-          "name": "Detail"
+        "TargetUserDetails": {
+          "id": "UserDetails",
+          "name": "UserDetails"
         }
       }
     },

@@ -1,0 +1,34 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:u="sap.ui.unified">
+  <Dialog id="uploadCvDialog" title="Upload CV" contentWidth="34rem">
+    <content>
+      <VBox class="sapUiSmallMargin">
+        <Text text="Upload your CV file (PDF, DOC, DOCX - Max 10MB)" class="sapUiSmallMarginBottom" />
+        
+        <u:FileUploader
+          id="fuCv"
+          width="100%"
+          fileType="pdf,doc,docx"
+          maximumFileSize="10"
+          sameFilenameAllowed="true"
+          uploadUrl="/cv/upload"
+          uploadOnChange="false"
+          sendXHR="true"
+          uploadComplete=".onUploadCvComplete"
+        />
+        
+        <ProgressIndicator 
+          id="piUploadProgress" 
+          percentValue="0" 
+          visible="false"
+          class="sapUiSmallMarginTop"
+        />
+      </VBox>
+    </content>
+    <beginButton>
+      <Button id="btnUploadCv" text="Upload" type="Emphasized" press=".onUploadCv"/>
+    </beginButton>
+    <endButton>
+      <Button text="Cancel" press=".onCloseCvDialog"/>
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>

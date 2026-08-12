@@ -1,0 +1,29 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <Dialog id="addReviewDialog" title="Recommend a colleague" contentWidth="34rem">
+    <content>
+      <VBox class="sapUiSmallMargin">
+        <Label text="Colleague" />
+        <ComboBox id="cbReviewEmployee" width="100%" items="{/Employees}">
+          <items>
+            <core:Item key="{ID}" text="{firstName} {lastName} ({email})"/>
+          </items>
+        </ComboBox>
+
+        <Label text="Title" class="sapUiSmallMarginTop" />
+        <Input id="inpReviewTitle" width="100%" />
+
+        <Label text="Content" class="sapUiSmallMarginTop" />
+        <TextArea id="taReviewContent" rows="4" width="100%" />
+
+        <Label text="Stars" class="sapUiSmallMarginTop" />
+        <RatingIndicator id="riReviewStars" maxValue="5" value="5" />
+      </VBox>
+    </content>
+    <beginButton>
+      <Button text="Submit" type="Emphasized" press=".onSubmitReview"/>
+    </beginButton>
+    <endButton>
+      <Button text="Cancel" press=".onCloseReviewDialog"/>
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>
