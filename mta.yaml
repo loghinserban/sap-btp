@@ -42,9 +42,23 @@ modules:
       - companymanagement.zip
       name: companymanagement
       target-path: app/
+    - artifacts:
+      - userview.zip
+      name: userview
+      target-path: app/
 - name: companymanagement
   type: html5
   path: app/companymanagement
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: userview
+  type: html5
+  path: app/userview
   build-parameters:
     build-result: dist
     builder: custom
