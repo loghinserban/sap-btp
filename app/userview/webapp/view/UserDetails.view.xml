@@ -1,38 +1,184 @@
 <mvc:View
-  controllerName="sapbtp.controller.UserDetails"
-  xmlns:mvc="sap.ui.core.mvc"
-  xmlns="sap.m"
-  displayBlock="true">
+    controllerName="userview.controller.UserDetails"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.uxap"
+    xmlns:layout="sap.ui.layout"
+    xmlns:form="sap.ui.layout.form"
+    xmlns:m="sap.m"
+    height="100%"
+>
+    <ObjectPageLayout
+        id="userObjectPage"
+        showTitleInHeaderContent="true"
+        upperCaseAnchorBar="false"
+        useIconTabBar="false"
+        showAnchorBarPopover="false"
+        busyIndicatorDelay="0"
+    >
+        <headerTitle>
+            <ObjectPageDynamicHeaderTitle id="userHeaderTitle">
+                <expandedHeading>
+                    <m:Title
+                        text="{firstName} {lastName}"
+                        wrapping="true"
+                    />
+                </expandedHeading>
+                <snappedHeading>
+                    <m:FlexBox
+                        fitContainer="true"
+                        alignItems="Center"
+                    >
+                        <m:Avatar
+                            initials="{= (${firstName} || '').charAt(0) + (${lastName} || '').charAt(0) }"
+                            backgroundColor="Accent6"
+                            displaySize="XS"
+                            class="sapUiTinyMarginEnd"
+                        />
+                        <m:Title
+                            text="{firstName} {lastName}"
+                            wrapping="true"
+                        />
+                    </m:FlexBox>
+                </snappedHeading>
 
-  <Page title="User Details" showNavButton="true" navButtonPress=".onNavBack">
-    <content>
-      <VBox class="sapUiResponsiveMargin">
-        <ObjectHeader
-          title="{view>/selectedUser/firstName}"
-          >
-          <attributes>
-            <ObjectAttribute title="Email" text="{view>/selectedUser/email}"/>
-            <ObjectAttribute title="Title" text="{view>/selectedUser/title}"/>
-            <ObjectAttribute title="Location" text="{view>/selectedUser/location}"/>
-          </attributes>
-        </ObjectHeader>
+                <expandedContent>
+                    <m:Text text="{department/name}" />
+                </expandedContent>
+                <snappedContent>
+                    <m:Text text="{department/name}" />
+                </snappedContent>
 
-        <Panel headerText="Skills" class="sapUiSmallMarginTop">
-          <List items="{view>/selectedUserSkills}">
-            <StandardListItem title="{view>skillName}" description="Level: {view>level}/5"/>
-          </List>
-        </Panel>
+                <navigationActions>
+                    <m:Button
+                        type="Transparent"
+                        icon="sap-icon://nav-back"
+                        tooltip="Back"
+                        press=".onNavBack"
+                    />
+                </navigationActions>
+            </ObjectPageDynamicHeaderTitle>
+        </headerTitle>
 
-        <Panel headerText="Reviews" class="sapUiSmallMarginTop">
-          <List items="{view>/selectedUserReviews}">
-            <ObjectListItem title="{view>reviewer}" intro="Rating: {view>rating}/5">
-              <attributes>
-                <ObjectAttribute text="{view>comment}"/>
-              </attributes>
-            </ObjectListItem>
-          </List>
-        </Panel>
-      </VBox>
-    </content>
-  </Page>
+        <headerContent>
+            <m:FlexBox
+                wrap="Wrap"
+                alignItems="Start"
+            >
+                <m:Avatar
+                    initials="{= (${firstName} || '').charAt(0) + (${lastName} || '').charAt(0) }"
+                    backgroundColor="Accent6"
+                    displaySize="L"
+                    class="sapUiTinyMarginEnd"
+                />
+                <layout:VerticalLayout class="sapUiSmallMarginBeginEnd">
+                    <m:ObjectStatus title="Email" text="{email}" />
+                    <m:ObjectStatus
+                        title="Date of birth"
+                        text="{ path: 'dateOfBirth', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'dd.MM.yyyy', UTC: true } }"
+                    />
+                </layout:VerticalLayout>
+                <layout:VerticalLayout class="sapUiSmallMarginBeginEnd">
+                    <m:ObjectStatus title="Department" text="{department/name}" />
+                    <m:ObjectStatus title="Experience" text="{experience}" />
+                </layout:VerticalLayout>
+            </m:FlexBox>
+        </headerContent>
+
+        <sections>
+            <ObjectPageSection title="General Information" titleUppercase="false">
+                <subSections>
+                    <ObjectPageSubSection title="Personal Details" titleUppercase="false">
+                        <blocks>
+                            <form:SimpleForm
+                                editable="false"
+                                layout="ColumnLayout"
+                                columnsM="2"
+                                columnsL="2"
+                                columnsXL="2"
+                            >
+                                <m:Label text="First Name" />
+                                <m:Text text="{firstName}" />
+
+                                <m:Label text="Last Name" />
+                                <m:Text text="{lastName}" />
+
+                                <m:Label text="Email" />
+                                <m:Link text="{email}" href="mailto:{email}" />
+
+                                <m:Label text="Date of birth" />
+                                <m:Text text="{ path: 'dateOfBirth', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'dd.MM.yyyy', UTC: true } }" />
+
+                                <m:Label text="Experience" />
+                                <m:Text text="{experience}" />
+
+                                <m:Label text="Department" />
+                                <m:Text text="{department/name}" />
+                            </form:SimpleForm>
+                        </blocks>
+                    </ObjectPageSubSection>
+                </subSections>
+            </ObjectPageSection>
+
+            <ObjectPageSection title="Skills" titleUppercase="false">
+                <subSections>
+                    <ObjectPageSubSection titleUppercase="false">
+                        <blocks>
+                            <m:Table items="{skills}">
+                                <m:columns>
+                                    <m:Column><m:Text text="Skill" /></m:Column>
+                                    <m:Column><m:Text text="Rating" /></m:Column>
+                                    <m:Column minScreenWidth="Tablet" demandPopin="true">
+                                        <m:Text text="Last used" />
+                                    </m:Column>
+                                </m:columns>
+                                <m:items>
+                                    <m:ColumnListItem>
+                                        <m:cells>
+                                            <m:ObjectIdentifier
+                                                title="{skill/name}"
+                                                text="{skill/description}"
+                                            />
+                                            <m:RatingIndicator
+                                                maxValue="5"
+                                                value="{rating}"
+                                                editable="false"
+                                            />
+                                            <m:ObjectStatus
+                                                text="{ path: 'lastUsed', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'dd.MM.yyyy', UTC: true } }"
+                                            />
+                                        </m:cells>
+                                    </m:ColumnListItem>
+                                </m:items>
+                            </m:Table>
+                        </blocks>
+                    </ObjectPageSubSection>
+                </subSections>
+            </ObjectPageSection>
+
+            <ObjectPageSection title="Reviews" titleUppercase="false">
+                <subSections>
+                    <ObjectPageSubSection titleUppercase="false">
+                        <blocks>
+                            <m:List items="{reviews}">
+                                <m:CustomListItem>
+                                    <m:VBox class="sapUiSmallMargin">
+                                        <m:HBox alignItems="Center">
+                                            <m:Title text="{title}" level="H4" />
+                                            <m:RatingIndicator
+                                                maxValue="5"
+                                                value="{stars}"
+                                                editable="false"
+                                                class="sapUiSmallMarginBegin"
+                                            />
+                                        </m:HBox>
+                                        <m:Text text="{content}" class="sapUiTinyMarginTop" />
+                                    </m:VBox>
+                                </m:CustomListItem>
+                            </m:List>
+                        </blocks>
+                    </ObjectPageSubSection>
+                </subSections>
+            </ObjectPageSection>
+        </sections>
+    </ObjectPageLayout>
 </mvc:View>
