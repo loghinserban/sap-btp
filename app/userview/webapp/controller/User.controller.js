@@ -138,9 +138,73 @@ sap.ui.define([
       this.getOwnerComponent().getRouter().navTo("RouteDetail", { id: sId });
     },
 
-    onOpenEditProfile: function () {
-      MessageToast.show("Edit Profile popup not implemented yet.");
-    },
+    onOpenEditProfile: async function () {
+  if (!this._oEditProfileDialog) {
+    this._oEditProfileDialog = await Fragment.load({
+      id: this.getView().getId(),
+      name: "userview.view.fragments.EditProfileDialog",
+      controller: this
+    });
+    this.getView().addDependent(this._oEditProfileDialog);
+  }
+  this._oEditProfileDialog.open();
+},
+
+onCloseEditProfileDialog: function () {
+  if (this._oEditProfileDialog) this._oEditProfileDialog.close();
+},
+
+onSaveProfile: function () {
+  var oView = this.getView();
+  var oModel = this.getOwnerComponent().getModel() || oView.getModel();
+
+  var oFirstName = Fragment.byId(oView.getId(), "inpFirstName");
+  var oLastName = Fragment.byId(oView.getId(), "inpLastName");
+  var oEmail = Fragment.byId(oView.getId(), "inpEmail");
+  var oExperience = Fragment.byId(oView.getId(), "inpExperience");
+  var oDateOfBirth = Fragment.byId(oView.getId(), "dpDateOfBirth");
+
+  var sFirstName = (oFirstName.getValue() || "").trim();
+  var sLastName = (oLastName.getValue() || "").trim();
+  var sEmail = (oEmail.getValue() || "").trim();
+  var iExperience = parseInt(oExperience.getValue()) || 0;
+  
+  // Get raw string value from DatePicker
+  var sDateOfBirth = oDateOfBirth.getValue();
+  
+  // If it's still a Date object, format it
+  if (sDateOfBirth instanceof Date) {
+    sDateOfBirth = this._formatDate(sDateOfBirth);
+  }
+
+  if (!sFirstName || !sLastName || !sEmail) {
+    MessageBox.warning("Please fill in all required fields.");
+    return;
+  }
+
+  var sEmployeeId = this._sCurrentEmployeeId;
+  var oPayload = {
+    firstName: sFirstName,
+    lastName: sLastName,
+    email: sEmail,
+    experience: iExperience,
+    dateOfBirth: sDateOfBirth || null
+  };
+
+  console.log("Sending payload:", oPayload);
+
+  oModel.update("/Employees('" + sEmployeeId + "')", oPayload, {
+    success: function () {
+      MessageToast.show("Profile updated successfully.");
+      this.onCloseEditProfileDialog();
+      this._loadCurrentUserData();
+    }.bind(this),
+    error: function (oErr) {
+      console.error("Update error:", oErr);
+      MessageBox.error("Failed to update profile.");
+    }
+  });
+},
 
     onOpenAddReview: async function () {
       if (!this._oAddReviewDialog) {

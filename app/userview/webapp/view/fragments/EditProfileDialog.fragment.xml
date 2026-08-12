@@ -1,0 +1,33 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <Dialog id="editProfileDialog" title="Edit Your Profile" contentWidth="34rem">
+    <content>
+      <VBox class="sapUiSmallMargin">
+        <Label text="First Name" />
+        <Input id="inpFirstName" width="100%" value="{view>/currentUser/firstName}" />
+
+        <Label text="Last Name" class="sapUiSmallMarginTop" />
+        <Input id="inpLastName" width="100%" value="{view>/currentUser/lastName}" />
+
+        <Label text="Email" class="sapUiSmallMarginTop" />
+        <Input id="inpEmail" width="100%" value="{view>/currentUser/email}" type="Email" />
+
+        <Label text="Experience (years)" class="sapUiSmallMarginTop" />
+        <Input id="inpExperience" width="100%" value="{view>/currentUser/experience}" type="Number" />
+
+        <Label text="Date of Birth" class="sapUiSmallMarginTop" />
+        <DatePicker 
+          id="dpDateOfBirth" 
+          width="100%" 
+          valueFormat="yyyy-MM-dd"
+          displayFormat="long"
+        />
+      </VBox>
+    </content>
+    <beginButton>
+      <Button text="Save" type="Emphasized" press=".onSaveProfile"/>
+    </beginButton>
+    <endButton>
+      <Button text="Cancel" press=".onCloseEditProfileDialog"/>
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>
