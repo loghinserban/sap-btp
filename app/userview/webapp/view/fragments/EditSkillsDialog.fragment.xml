@@ -1,26 +1,56 @@
 <core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
-  <Dialog id="editSkillsDialog" title="Edit Your Skills" contentWidth="34rem">
+  <Dialog id="editSkillsDialog" title="Edit Your Skills" contentWidth="40rem">
     <content>
       <VBox class="sapUiSmallMargin">
-        <Label text="Skill" />
-        <ComboBox id="cbSkill" width="100%" items="{/Skills}">
+        <Label text="Your Skills" />
+        <List id="skillsList" items="{view>/currentUser/skills}" inset="false" itemPress=".onSelectEmployeeSkill">
           <items>
-            <core:Item key="{ID}" text="{name}" />
+            <CustomListItem>
+              <HBox justifyContent="SpaceBetween" alignItems="Center" width="100%">
+                <VBox>
+                  <Text text="{view>skill/name}" wrapping="false" />
+                  <Text text="Rating: {view>rating}, Last used: {view>lastUsed}" class="sapUiSmallMarginTop" wrapping="false" />
+                </VBox>
+                <Button icon="sap-icon://delete" type="Reject" tooltip="Delete skill"
+                        press=".onDeleteSkill">
+                  <customData>
+                    <core:CustomData key="employeeSkillId" value="{view>ID}" writeToDom="false" />
+                  </customData>
+                </Button>
+              </HBox>
+            </CustomListItem>
           </items>
-        </ComboBox>
+        </List>
+
+        <Label text="Add or Update Skill" class="sapUiSmallMarginTop" />
+        <HBox alignItems="Center" class="sapUiSmallMarginTop" width="100%" justifyContent="Start">
+          <VBox width="60%" class="sapUiSmallMarginEnd">
+            <Label text="Choose existing skill" />
+            <ComboBox id="cbSkill" width="100%" items="{/Skills}">
+              <items>
+                <core:Item key="{ID}" text="{name}" />
+              </items>
+            </ComboBox>
+          </VBox>
+          <VBox width="40%">
+            <Label text="Or new skill" />
+            <Input id="inpNewSkill" placeholder="Type new skill name" width="100%" />
+          </VBox>
+        </HBox>
 
         <Label text="Rating" class="sapUiSmallMarginTop" />
         <RatingIndicator id="riSkillRating" maxValue="5" value="3" />
 
         <Label text="Last Used" class="sapUiSmallMarginTop" />
         <DatePicker id="dpLastUsed" width="100%" valueFormat="yyyy-MM-dd" displayFormat="long"/>
+
+        <HBox justifyContent="End" class="sapUiSmallMarginTop">
+          <Button text="Add / Update" type="Emphasized" press=".onAddOrUpdateSkill" />
+        </HBox>
       </VBox>
     </content>
     <beginButton>
-      <Button text="Save" type="Emphasized" press=".onSaveSkill"/>
+      <Button text="Close" press=".onCloseSkillDialog"/>
     </beginButton>
-    <endButton>
-      <Button text="Cancel" press=".onCloseSkillDialog"/>
-    </endButton>
   </Dialog>
 </core:FragmentDefinition>

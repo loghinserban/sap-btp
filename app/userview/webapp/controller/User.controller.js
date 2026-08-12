@@ -75,10 +75,51 @@ sap.ui.define([
                 },
                 success: function (oData) {
                     console.log("Current user loaded:", oData);
+
+                    function parseDateSafe(value) {
+                        if (value === null || value === undefined || value === "") {
+                            return null;
+                        }
+                        if (typeof value === "string" && value.indexOf("/Date(") === 0) {
+                            try {
+                                var ms = parseInt(value.replace(/\/Date\((-?\d+)\)\//, "$1"), 10);
+                                var d = new Date(ms);
+                                return isNaN(d.getTime()) ? null : d;
+                            } catch (e) {
+                                return null;
+                            }
+                        }
+                        if (typeof value === "string") {
+                            var d2 = new Date(value);
+                            return isNaN(d2.getTime()) ? null : d2;
+                        }
+                        if (value instanceof Date) {
+                            return isNaN(value.getTime()) ? null : value;
+                        }
+                        return null;
+                    }
+
+                    if (oData.hasOwnProperty("dateOfBirth")) {
+                        oData.dateOfBirth = parseDateSafe(oData.dateOfBirth);
+                    }
+
+                    var aSkills = (oData.skills && oData.skills.results) ? oData.skills.results : [];
+                    aSkills = aSkills.map(function (item) {
+                        var cloned = Object.assign({}, item);
+                        cloned.lastUsed = parseDateSafe(cloned.lastUsed);
+                        return cloned;
+                    });
+
+                    var aReviews = (oData.reviews && oData.reviews.results) ? oData.reviews.results.map(function (r) {
+                        var rc = Object.assign({}, r);
+                        if (rc.createdAt) { rc.createdAt = parseDateSafe(rc.createdAt); }
+                        return rc;
+                    }) : [];
+
                     var oVM = this.getView().getModel("view");
                     oVM.setProperty("/currentUser", oData);
-                    oVM.setProperty("/currentUser/skills", (oData.skills && oData.skills.results) || []);
-                    oVM.setProperty("/currentUser/reviews", (oData.reviews && oData.reviews.results) || []);
+                    oVM.setProperty("/currentUser/skills", aSkills);
+                    oVM.setProperty("/currentUser/reviews", aReviews);
                 }.bind(this),
                 error: function (oErr) {
                     console.error("Load current user error:", oErr);
@@ -169,12 +210,12 @@ sap.ui.define([
             var sEmail = (oEmail.getValue() || "").trim();
             var iExperience = parseInt(oExperience.getValue()) || 0;
 
-            // Get raw string value from DatePicker
-            var sDateOfBirth = oDateOfBirth.getValue();
-
-            // If it's still a Date object, format it
-            if (sDateOfBirth instanceof Date) {
-                sDateOfBirth = this._formatDate(sDateOfBirth);
+            var oDOB = oDateOfBirth.getDateValue ? oDateOfBirth.getDateValue() : null;
+            var sDateOfBirth = null;
+            if (oDOB instanceof Date && !isNaN(oDOB)) {
+                sDateOfBirth = this._formatDate(oDOB);
+            } else {
+                sDateOfBirth = oDateOfBirth.getValue ? oDateOfBirth.getValue() : null;
             }
 
             if (!sFirstName || !sLastName || !sEmail) {
@@ -226,6 +267,19 @@ sap.ui.define([
                     controller: this
                 });
                 this.getView().addDependent(this._oEditSkillsDialog);
+            }
+            var oView = this.getView();
+            try {
+                var oCb = Fragment.byId(oView.getId(), "cbSkill");
+                if (oCb && oCb.setSelectedKey) { oCb.setSelectedKey(""); }
+                var oInp = Fragment.byId(oView.getId(), "inpNewSkill");
+                if (oInp && oInp.setValue) { oInp.setValue(""); }
+                var oRi = Fragment.byId(oView.getId(), "riSkillRating");
+                if (oRi && oRi.setValue) { oRi.setValue(3); }
+                var oDp = Fragment.byId(oView.getId(), "dpLastUsed");
+                if (oDp && oDp.setDateValue) { oDp.setDateValue(null); } else if (oDp && oDp.setValue) { oDp.setValue(""); }
+            } catch (e) {
+                console.warn("Could not clear fragment controls yet:", e);
             }
             this._oEditSkillsDialog.open();
         },
@@ -304,7 +358,15 @@ sap.ui.define([
 
             var sSkillId = oSkill.getSelectedKey();
             var iRating = Math.round(oRating.getValue() || 0);
-            var sLastUsed = oDate.getValue();
+
+            var oDateVal = oDate.getDateValue ? oDate.getDateValue() : null;
+            var sLastUsed = null;
+            if (oDateVal instanceof Date && !isNaN(oDateVal)) {
+                sLastUsed = this._formatDate(oDateVal);
+            } else {
+                sLastUsed = oDate.getValue ? oDate.getValue() : null;
+            }
+
             var sEmployeeId = this._sCurrentEmployeeId;
 
             if (!sEmployeeId) {
@@ -331,7 +393,8 @@ sap.ui.define([
                                 this.onCloseSkillDialog();
                                 this._loadCurrentUserData();
                             }.bind(this),
-                            error: function () {
+                            error: function (oErr) {
+                                console.error("Update EmployeeSkill error:", oErr);
                                 MessageBox.error("Failed to update skill.");
                             }
                         });
@@ -347,84 +410,305 @@ sap.ui.define([
                                 this.onCloseSkillDialog();
                                 this._loadCurrentUserData();
                             }.bind(this),
-                            error: function () {
+                            error: function (oErr) {
+                                console.error("Create EmployeeSkill error:", oErr);
                                 MessageBox.error("Failed to add skill.");
                             }
                         });
                     }
                 }.bind(this),
-                error: function () {
+                error: function (oErr) {
+                    console.error("Read EmployeeSkills error:", oErr);
                     MessageBox.error("Failed to check existing skill.");
                 }
             });
         },
 
-        onUploadCv: function () {
-  var oView = this.getView();
-  var oUploader = Fragment.byId(oView.getId(), "fuCv");
-  var oFile = oUploader && oUploader.oFileUpload && oUploader.oFileUpload.files && oUploader.oFileUpload.files[0];
+        
+        onAddOrUpdateSkill: function () {
+            var oView = this.getView();
+            var oModel = this.getOwnerComponent().getModel() || oView.getModel();
 
-  if (!oFile) {
-    MessageBox.warning("Please choose a CV file.");
-    return;
-  }
+            var oSkill = Fragment.byId(oView.getId(), "cbSkill");
+            var oNewSkill = Fragment.byId(oView.getId(), "inpNewSkill");
+            var oRating = Fragment.byId(oView.getId(), "riSkillRating");
+            var oDate = Fragment.byId(oView.getId(), "dpLastUsed");
 
-  if (!this._sCurrentEmployeeId) {
-    MessageBox.warning("Current employee ID is missing.");
-    return;
-  }
+            var sSelectedSkillId = oSkill ? oSkill.getSelectedKey() : "";
+            var sNewSkillName = (oNewSkill && oNewSkill.getValue ? oNewSkill.getValue() : "").trim();
+            var iRating = Math.round(oRating.getValue() || 0);
 
-  var oProgress = Fragment.byId(oView.getId(), "piUploadProgress");
-  var oBtnUpload = Fragment.byId(oView.getId(), "btnUploadCv");
-  
-  oProgress.setVisible(true);
-  oProgress.setPercentValue(0);
-  oBtnUpload.setEnabled(false);
+            var oDateVal = oDate && oDate.getDateValue ? oDate.getDateValue() : null;
+            var sLastUsed = null;
+            if (oDateVal instanceof Date && !isNaN(oDateVal)) {
+                sLastUsed = this._formatDate(oDateVal);
+            } else {
+                sLastUsed = oDate && oDate.getValue ? oDate.getValue() : null;
+            }
 
-  var oFormData = new FormData();
-  oFormData.append("file", oFile);
-  oFormData.append("employeeID", this._sCurrentEmployeeId);
+            var sEmployeeId = this._sCurrentEmployeeId;
 
-  fetch("/cv/upload", {
-    method: "POST",
-    body: oFormData
-  })
-    .then(function (res) {
-      oProgress.setPercentValue(100);
-      
-      if (!res.ok) {
-        throw new Error(res.statusText);
-      }
-      return res.json();
-    })
-    .then(function (data) {
-      MessageToast.show("CV uploaded successfully!");
-      oUploader.clear();
-      setTimeout(function () {
-        this.onCloseCvDialog();
-      }.bind(this), 500);
-    }.bind(this))
-    .catch(function (err) {
-      console.error("CV upload error:", err);
-      MessageBox.error("Failed to upload CV: " + err.message);
-    })
-    .finally(function () {
-      oProgress.setVisible(false);
-      oBtnUpload.setEnabled(true);
+            if (!sEmployeeId) {
+                MessageBox.warning("Current employee ID is missing.");
+                return;
+            }
+
+            if (!sSelectedSkillId && !sNewSkillName) {
+                MessageBox.warning("Please select an existing skill or type a new skill name.");
+                return;
+            }
+
+            if (iRating < 1 || !sLastUsed) {
+                MessageBox.warning("Please provide a rating and last used date.");
+                return;
+            }
+
+            var that = this;
+
+            function continueWithSkillId(sSkillId) {
+                that._createOrUpdateEmployeeSkill(oModel, sEmployeeId, sSkillId, iRating, sLastUsed, oDateVal);
+            }
+
+            if (sNewSkillName && !sSelectedSkillId) {
+                console.log("Creating new Skill:", sNewSkillName);
+                oModel.create("/Skills", { name: sNewSkillName }, {
+                    success: function (oCreated) {
+                        console.log("Created Skill result:", oCreated);
+                        var sCreatedId = oCreated && (oCreated.ID || oCreated.id || oCreated.Id) || null;
+                        if (!sCreatedId && oCreated && oCreated.hasOwnProperty("name")) {
+                            var sEscaped = sNewSkillName.replace(/'/g, "''");
+                            oModel.read("/Skills?$filter=name eq '" + sEscaped + "'", {
+                                success: function (oData) {
+                                    var a = (oData && oData.results) || [];
+                                    if (a.length > 0) {
+                                        continueWithSkillId(a[0].ID || a[0].id);
+                                    } else {
+                                        MessageBox.error("Could not determine created skill ID.");
+                                    }
+                                },
+                                error: function (oErr) {
+                                    console.error("Read-back created Skill failed:", oErr);
+                                    MessageBox.error("Failed to verify created skill.");
+                                }
+                            });
+                        } else {
+                            continueWithSkillId(sCreatedId);
+                        }
+                    },
+                    error: function (oErr) {
+                        console.error("Create skill failed:", oErr);
+                        MessageBox.error("Failed to create new skill.");
+                    }
+                });
+            } else {
+                continueWithSkillId(sSelectedSkillId);
+            }
+        },
+
+       
+        _createOrUpdateEmployeeSkill: function (oModel, sEmployeeId, sSkillId, iRating, sLastUsedString, oDateObj) {
+    var that = this;
+    var sReadPath = "/EmployeeSkills?$filter=employee_ID eq '" + sEmployeeId + "' and skill_ID eq '" + sSkillId + "'";
+    console.log("Checking EmployeeSkills with read path:", sReadPath);
+
+    oModel.read(sReadPath, {
+        success: function (oData) {
+            var aRows = (oData && oData.results) ? oData.results : [];
+
+            var dateProp = "lastUsed";
+            if (aRows.length > 0) {
+                var sample = aRows[0];
+                if (sample.hasOwnProperty("lastUsed")) dateProp = "lastUsed";
+                else if (sample.hasOwnProperty("LastUsed")) dateProp = "LastUsed";
+                else if (sample.hasOwnProperty("Lastused")) dateProp = "Lastused";
+            }
+
+            function buildPayload(includeKeys) {
+                var p = { rating: iRating };
+                p[dateProp] = (oDateObj instanceof Date && !isNaN(oDateObj)) ? oDateObj : sLastUsedString;
+                if (includeKeys) {
+                    p.employee_ID = sEmployeeId;
+                    p.skill_ID = sSkillId;
+                }
+                return p;
+            }
+
+            var bOriginalUseBatch = true;
+            if (typeof oModel.getUseBatch === "function") {
+                bOriginalUseBatch = !!oModel.getUseBatch();
+                try { oModel.setUseBatch(false); } catch (e) { console.warn("setUseBatch(false) failed:", e); }
+            }
+
+            function restoreBatch() {
+                try {
+                    if (typeof oModel.setUseBatch === "function") oModel.setUseBatch(!!bOriginalUseBatch);
+                } catch (e) { console.warn("restoring useBatch failed:", e); }
+            }
+
+            if (aRows.length > 0) {
+                var sEmpSkillId = aRows[0].ID;
+                var updatePayload = buildPayload(false);
+                console.log("Updating EmployeeSkill ID:", sEmpSkillId, "payload:", updatePayload);
+
+                oModel.update("/EmployeeSkills('" + sEmpSkillId + "')", updatePayload, {
+                    success: function (oResp) {
+                        console.log("Update success response:", oResp);
+                        MessageToast.show("Skill updated.");
+                        restoreBatch();
+                        that.onCloseSkillDialog();
+                        that._loadCurrentUserData();
+                    },
+                    error: function (oErr) {
+                        console.error("Update failed:", oErr);
+                        try { console.error("Response text:", oErr && (oErr.responseText || oErr.response)); } catch (e) {}
+                        restoreBatch();
+                        MessageBox.error("Failed to update skill. See console Network/Logs for details.");
+                    }
+                });
+            } else {
+                var createPayload = buildPayload(true);
+                console.log("Creating EmployeeSkill payload:", createPayload);
+
+                oModel.create("/EmployeeSkills", createPayload, {
+                    success: function (oResp) {
+                        console.log("Create success response:", oResp);
+                        MessageToast.show("Skill added.");
+                        restoreBatch();
+                        that.onCloseSkillDialog();
+                        that._loadCurrentUserData();
+                    },
+                    error: function (oErr) {
+                        console.error("Create failed:", oErr);
+                        try { console.error("Response text:", oErr && (oErr.responseText || oErr.response)); } catch (e) {}
+                        restoreBatch();
+                        MessageBox.error("Failed to add skill. See console Network/Logs for details.");
+                    }
+                });
+            }
+        },
+        error: function (oErr) {
+            console.error("Read EmployeeSkills failed:", oErr);
+            try { console.error("Response text:", oErr && (oErr.responseText || oErr.response)); } catch (e) {}
+            MessageBox.error("Failed to check existing skill.");
+        }
     });
 },
 
-onUploadCvComplete: function (oEvent) {
-  var oUploader = oEvent.getSource();
-  var iStatus = oEvent.getParameter("status");
+        
+        onDeleteSkill: function (oEvent) {
+            var oBtn = oEvent.getSource();
+            var aCustom = oBtn.getCustomData && oBtn.getCustomData();
+            var sId = null;
+            if (Array.isArray(aCustom) && aCustom.length > 0) {
+                sId = aCustom[0].getValue();
+            } else if (oBtn.data) {
+                sId = oBtn.data("employeeSkillId");
+            }
 
-  if (iStatus === 200 || iStatus === 201) {
-    MessageToast.show("CV uploaded successfully!");
-    oUploader.clear();
-    this.onCloseCvDialog();
-  } else {
-    MessageBox.error("CV upload failed with status: " + iStatus);
-  }
-}
+            if (!sId) {
+                MessageBox.error("Could not determine EmployeeSkill id to delete.");
+                return;
+            }
+
+            var oView = this.getView();
+            var oModel = this.getOwnerComponent().getModel() || oView.getModel();
+            var that = this;
+
+            MessageBox.confirm("Delete this skill from your profile?", {
+                onClose: function (sAction) {
+                    if (sAction !== MessageBox.Action.OK) return;
+
+                    oModel.remove("/EmployeeSkills('" + sId + "')", {
+                        success: function () {
+                            MessageToast.show("Skill removed.");
+                            that._loadCurrentUserData();
+                        },
+                        error: function (oErr) {
+                            console.error("Remove EmployeeSkill failed:", oErr);
+                            MessageBox.error("Failed to remove skill.");
+                        }
+                    });
+                }
+            });
+        },
+
+        onUploadCv: function () {
+            var oView = this.getView();
+            var oUploader = Fragment.byId(oView.getId(), "fuCv");
+            var oFile = oUploader && oUploader.oFileUpload && oUploader.oFileUpload.files && oUploader.oFileUpload.files[0];
+
+            if (!oFile) {
+                MessageBox.warning("Please choose a CV file.");
+                return;
+            }
+
+            if (!this._sCurrentEmployeeId) {
+                MessageBox.warning("Current employee ID is missing.");
+                return;
+            }
+
+            var oProgress = Fragment.byId(oView.getId(), "piUploadProgress");
+            var oBtnUpload = Fragment.byId(oView.getId(), "btnUploadCv");
+
+            oProgress.setVisible(true);
+            oProgress.setPercentValue(0);
+            oBtnUpload.setEnabled(false);
+
+            var oFormData = new FormData();
+            oFormData.append("file", oFile);
+            oFormData.append("employeeID", this._sCurrentEmployeeId);
+
+            fetch("/cv/upload", {
+                method: "POST",
+                body: oFormData
+            })
+                .then(function (res) {
+                    oProgress.setPercentValue(100);
+
+                    if (!res.ok) {
+                        throw new Error(res.statusText);
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    MessageToast.show("CV uploaded successfully!");
+                    oUploader.clear();
+                    setTimeout(function () {
+                        this.onCloseCvDialog();
+                    }.bind(this), 500);
+                }.bind(this))
+                .catch(function (err) {
+                    console.error("CV upload error:", err);
+                    MessageBox.error("Failed to upload CV: " + err.message);
+                })
+                .finally(function () {
+                    oProgress.setVisible(false);
+                    oBtnUpload.setEnabled(true);
+                });
+        },
+
+        onUploadCvComplete: function (oEvent) {
+            var oUploader = oEvent.getSource();
+            var iStatus = oEvent.getParameter("status");
+
+            if (iStatus === 200 || iStatus === 201) {
+                MessageToast.show("CV uploaded successfully!");
+                oUploader.clear();
+                this.onCloseCvDialog();
+            } else {
+                MessageBox.error("CV upload failed with status: " + iStatus);
+            }
+        },
+
+        
+        _formatDate: function (oDate) {
+            if (!(oDate instanceof Date) || isNaN(oDate)) {
+                return null;
+            }
+            var y = oDate.getFullYear();
+            var m = (oDate.getMonth() + 1).toString().padStart(2, "0");
+            var d = oDate.getDate().toString().padStart(2, "0");
+            return y + "-" + m + "-" + d;
+        }
     });
 });
