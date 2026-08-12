@@ -1,396 +1,430 @@
 sap.ui.define([
-  "sap/ui/core/mvc/Controller",
-  "sap/ui/core/Fragment",
-  "sap/ui/model/json/JSONModel",
-  "sap/ui/model/Filter",
-  "sap/ui/model/FilterOperator",
-  "sap/m/MessageBox",
-  "sap/m/MessageToast"
+    "sap/ui/core/mvc/Controller",
+    "sap/ui/core/Fragment",
+    "sap/ui/model/json/JSONModel",
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator",
+    "sap/m/MessageBox",
+    "sap/m/MessageToast"
 ], function (
-  Controller,
-  Fragment,
-  JSONModel,
-  Filter,
-  FilterOperator,
-  MessageBox,
-  MessageToast
+    Controller,
+    Fragment,
+    JSONModel,
+    Filter,
+    FilterOperator,
+    MessageBox,
+    MessageToast
 ) {
-  "use strict";
+    "use strict";
 
-  return Controller.extend("userview.controller.User", {
-    onInit: function () {
-      this._sCurrentEmployeeId = this._resolveCurrentEmployeeId();
+    return Controller.extend("userview.controller.User", {
+        onInit: function () {
+            this._sCurrentEmployeeId = this._resolveCurrentEmployeeId();
 
-      var oViewModel = new JSONModel({
-        currentUser: {
-          ID: this._sCurrentEmployeeId || "",
-          firstName: "",
-          lastName: "",
-          email: "",
-          experience: 0,
-          dateOfBirth: null,
-          department: { name: "" },
-          skills: [],
-          reviews: []
-        }
-      });
-      this.getView().setModel(oViewModel, "view");
+            var oViewModel = new JSONModel({
+                currentUser: {
+                    ID: this._sCurrentEmployeeId || "",
+                    firstName: "",
+                    lastName: "",
+                    email: "",
+                    experience: 0,
+                    dateOfBirth: null,
+                    department: { name: "" },
+                    skills: [],
+                    reviews: []
+                }
+            });
+            this.getView().setModel(oViewModel, "view");
 
-      setTimeout(function () {
-        this._loadData();
-      }.bind(this), 100);
-    },
-
-    _loadData: function () {
-      var oModel = this.getOwnerComponent().getModel() || this.getView().getModel();
-
-      if (!oModel) {
-        MessageBox.error("OData model not initialized.");
-        return;
-      }
-
-      oModel.read("/Employees", {
-        success: function (oData) {
-          console.log("Employees loaded:", oData);
+            setTimeout(function () {
+                this._loadData();
+            }.bind(this), 100);
         },
-        error: function (oErr) {
-          console.error("Load employees error:", oErr);
-        }
-      });
 
-      if (this._sCurrentEmployeeId) {
-        this._loadCurrentUserData();
-      }
-    },
+        _loadData: function () {
+            var oModel = this.getOwnerComponent().getModel() || this.getView().getModel();
 
-    _loadCurrentUserData: function () {
-      var oModel = this.getOwnerComponent().getModel() || this.getView().getModel();
-      var sId = this._sCurrentEmployeeId;
+            if (!oModel) {
+                MessageBox.error("OData model not initialized.");
+                return;
+            }
 
-      if (!oModel || !sId) return;
+            oModel.read("/Employees", {
+                success: function (oData) {
+                    console.log("Employees loaded:", oData);
+                },
+                error: function (oErr) {
+                    console.error("Load employees error:", oErr);
+                }
+            });
 
-      oModel.read("/Employees('" + sId + "')", {
-        urlParameters: {
-          "$expand": "department,skills($expand=skill),reviews"
+            if (this._sCurrentEmployeeId) {
+                this._loadCurrentUserData();
+            }
         },
-        success: function (oData) {
-          console.log("Current user loaded:", oData);
-          var oVM = this.getView().getModel("view");
-          oVM.setProperty("/currentUser", oData);
-          oVM.setProperty("/currentUser/skills", (oData.skills && oData.skills.results) || []);
-          oVM.setProperty("/currentUser/reviews", (oData.reviews && oData.reviews.results) || []);
-        }.bind(this),
-        error: function (oErr) {
-          console.error("Load current user error:", oErr);
-        }
-      });
-    },
 
-    _resolveCurrentEmployeeId: function () {
-      try {
-        var oParams = new URLSearchParams(window.location.search);
-        var sId = oParams.get("employeeId") || oParams.get("empId");
-        if (sId) {
-          localStorage.setItem("currentEmployeeId", sId);
-          return sId;
-        }
-      } catch (e) {}
+        _loadCurrentUserData: function () {
+            var oModel = this.getOwnerComponent().getModel() || this.getView().getModel();
+            var sId = this._sCurrentEmployeeId;
 
-      try {
-        var oCompData = this.getOwnerComponent().getComponentData();
-        var oStartup = oCompData && oCompData.startupParameters;
-        var sId = (oStartup && oStartup.employeeId && oStartup.employeeId[0]) ||
-                  (oStartup && oStartup.empId && oStartup.empId[0]);
-        if (sId) {
-          localStorage.setItem("currentEmployeeId", sId);
-          return sId;
-        }
-      } catch (e2) {}
+            if (!oModel || !sId) return;
 
-      return localStorage.getItem("currentEmployeeId") || "";
-    },
+            oModel.read("/Employees('" + sId + "')", {
+                urlParameters: {
+                    "$expand": "department,skills($expand=skill),reviews"
+                },
+                success: function (oData) {
+                    console.log("Current user loaded:", oData);
+                    var oVM = this.getView().getModel("view");
+                    oVM.setProperty("/currentUser", oData);
+                    oVM.setProperty("/currentUser/skills", (oData.skills && oData.skills.results) || []);
+                    oVM.setProperty("/currentUser/reviews", (oData.reviews && oData.reviews.results) || []);
+                }.bind(this),
+                error: function (oErr) {
+                    console.error("Load current user error:", oErr);
+                }
+            });
+        },
 
-    onUserSearch: function (oEvent) {
-      var sQuery = oEvent.getParameter("newValue") || oEvent.getParameter("query") || "";
-      var oTable = this.byId("usersTable");
-      var oBinding = oTable && oTable.getBinding("items");
-      if (!oBinding) return;
+        _resolveCurrentEmployeeId: function () {
+            try {
+                var oParams = new URLSearchParams(window.location.search);
+                var sId = oParams.get("employeeId") || oParams.get("empId");
+                if (sId) {
+                    localStorage.setItem("currentEmployeeId", sId);
+                    return sId;
+                }
+            } catch (e) { }
 
-      if (!sQuery) {
-        oBinding.filter([]);
-        return;
-      }
+            try {
+                var oCompData = this.getOwnerComponent().getComponentData();
+                var oStartup = oCompData && oCompData.startupParameters;
+                var sId = (oStartup && oStartup.employeeId && oStartup.employeeId[0]) ||
+                    (oStartup && oStartup.empId && oStartup.empId[0]);
+                if (sId) {
+                    localStorage.setItem("currentEmployeeId", sId);
+                    return sId;
+                }
+            } catch (e2) { }
 
-      oBinding.filter(new Filter({
-        filters: [
-          new Filter("firstName", FilterOperator.Contains, sQuery),
-          new Filter("lastName", FilterOperator.Contains, sQuery),
-          new Filter("email", FilterOperator.Contains, sQuery)
-        ],
-        and: false
-      }));
-    },
+            return localStorage.getItem("currentEmployeeId") || "";
+        },
 
-    onUserPress: function (oEvent) {
-      var oCtx = oEvent.getSource().getBindingContext();
-      if (!oCtx) return;
-      var sId = oCtx.getProperty("ID");
-      this.getOwnerComponent().getRouter().navTo("RouteDetail", { id: sId });
-    },
+        onUserSearch: function (oEvent) {
+            var sQuery = oEvent.getParameter("newValue") || oEvent.getParameter("query") || "";
+            var oTable = this.byId("usersTable");
+            var oBinding = oTable && oTable.getBinding("items");
+            if (!oBinding) return;
 
-    onOpenEditProfile: async function () {
-  if (!this._oEditProfileDialog) {
-    this._oEditProfileDialog = await Fragment.load({
-      id: this.getView().getId(),
-      name: "userview.view.fragments.EditProfileDialog",
-      controller: this
-    });
-    this.getView().addDependent(this._oEditProfileDialog);
-  }
-  this._oEditProfileDialog.open();
-},
+            if (!sQuery) {
+                oBinding.filter([]);
+                return;
+            }
 
-onCloseEditProfileDialog: function () {
-  if (this._oEditProfileDialog) this._oEditProfileDialog.close();
-},
+            oBinding.filter(new Filter({
+                filters: [
+                    new Filter("firstName", FilterOperator.Contains, sQuery),
+                    new Filter("lastName", FilterOperator.Contains, sQuery),
+                    new Filter("email", FilterOperator.Contains, sQuery)
+                ],
+                and: false
+            }));
+        },
 
-onSaveProfile: function () {
+        onUserPress: function (oEvent) {
+            var oCtx = oEvent.getSource().getBindingContext();
+            if (!oCtx) return;
+            var sId = oCtx.getProperty("ID");
+            this.getOwnerComponent().getRouter().navTo("RouteDetail", { id: sId });
+        },
+
+        onOpenEditProfile: async function () {
+            if (!this._oEditProfileDialog) {
+                this._oEditProfileDialog = await Fragment.load({
+                    id: this.getView().getId(),
+                    name: "userview.view.fragments.EditProfileDialog",
+                    controller: this
+                });
+                this.getView().addDependent(this._oEditProfileDialog);
+            }
+            this._oEditProfileDialog.open();
+        },
+
+        onCloseEditProfileDialog: function () {
+            if (this._oEditProfileDialog) this._oEditProfileDialog.close();
+        },
+
+        onSaveProfile: function () {
+            var oView = this.getView();
+            var oModel = this.getOwnerComponent().getModel() || oView.getModel();
+
+            var oFirstName = Fragment.byId(oView.getId(), "inpFirstName");
+            var oLastName = Fragment.byId(oView.getId(), "inpLastName");
+            var oEmail = Fragment.byId(oView.getId(), "inpEmail");
+            var oExperience = Fragment.byId(oView.getId(), "inpExperience");
+            var oDateOfBirth = Fragment.byId(oView.getId(), "dpDateOfBirth");
+
+            var sFirstName = (oFirstName.getValue() || "").trim();
+            var sLastName = (oLastName.getValue() || "").trim();
+            var sEmail = (oEmail.getValue() || "").trim();
+            var iExperience = parseInt(oExperience.getValue()) || 0;
+
+            // Get raw string value from DatePicker
+            var sDateOfBirth = oDateOfBirth.getValue();
+
+            // If it's still a Date object, format it
+            if (sDateOfBirth instanceof Date) {
+                sDateOfBirth = this._formatDate(sDateOfBirth);
+            }
+
+            if (!sFirstName || !sLastName || !sEmail) {
+                MessageBox.warning("Please fill in all required fields.");
+                return;
+            }
+
+            var sEmployeeId = this._sCurrentEmployeeId;
+            var oPayload = {
+                firstName: sFirstName,
+                lastName: sLastName,
+                email: sEmail,
+                experience: iExperience,
+                dateOfBirth: sDateOfBirth || null
+            };
+
+            console.log("Sending payload:", oPayload);
+
+            oModel.update("/Employees('" + sEmployeeId + "')", oPayload, {
+                success: function () {
+                    MessageToast.show("Profile updated successfully.");
+                    this.onCloseEditProfileDialog();
+                    this._loadCurrentUserData();
+                }.bind(this),
+                error: function (oErr) {
+                    console.error("Update error:", oErr);
+                    MessageBox.error("Failed to update profile.");
+                }
+            });
+        },
+
+        onOpenAddReview: async function () {
+            if (!this._oAddReviewDialog) {
+                this._oAddReviewDialog = await Fragment.load({
+                    id: this.getView().getId(),
+                    name: "userview.view.fragments.AddReviewDialog",
+                    controller: this
+                });
+                this.getView().addDependent(this._oAddReviewDialog);
+            }
+            this._oAddReviewDialog.open();
+        },
+
+        onOpenEditSkills: async function () {
+            if (!this._oEditSkillsDialog) {
+                this._oEditSkillsDialog = await Fragment.load({
+                    id: this.getView().getId(),
+                    name: "userview.view.fragments.EditSkillsDialog",
+                    controller: this
+                });
+                this.getView().addDependent(this._oEditSkillsDialog);
+            }
+            this._oEditSkillsDialog.open();
+        },
+
+        onOpenUploadCV: async function () {
+            if (!this._oUploadCvDialog) {
+                this._oUploadCvDialog = await Fragment.load({
+                    id: this.getView().getId(),
+                    name: "userview.view.fragments.UploadCVDialog",
+                    controller: this
+                });
+                this.getView().addDependent(this._oUploadCvDialog);
+            }
+            this._oUploadCvDialog.open();
+        },
+
+        onCloseReviewDialog: function () {
+            if (this._oAddReviewDialog) this._oAddReviewDialog.close();
+        },
+
+        onCloseSkillDialog: function () {
+            if (this._oEditSkillsDialog) this._oEditSkillsDialog.close();
+        },
+
+        onCloseCvDialog: function () {
+            if (this._oUploadCvDialog) this._oUploadCvDialog.close();
+        },
+
+        onSubmitReview: function () {
+            var oView = this.getView();
+            var oModel = this.getOwnerComponent().getModel() || oView.getModel();
+
+            var oEmp = Fragment.byId(oView.getId(), "cbReviewEmployee");
+            var oTitle = Fragment.byId(oView.getId(), "inpReviewTitle");
+            var oContent = Fragment.byId(oView.getId(), "taReviewContent");
+            var oStars = Fragment.byId(oView.getId(), "riReviewStars");
+
+            var sEmployeeId = oEmp.getSelectedKey();
+            var sTitle = (oTitle.getValue() || "").trim();
+            var sContent = (oContent.getValue() || "").trim();
+            var iStars = Math.round(oStars.getValue() || 0);
+
+            if (!sEmployeeId || !sTitle || !sContent || iStars < 1) {
+                MessageBox.warning("Please complete all review fields.");
+                return;
+            }
+
+            oModel.create("/Reviews", {
+                title: sTitle,
+                content: sContent,
+                stars: iStars,
+                employee_ID: sEmployeeId
+            }, {
+                success: function () {
+                    MessageToast.show("Recommendation submitted.");
+                    this.onCloseReviewDialog();
+                    oEmp.setSelectedKey("");
+                    oTitle.setValue("");
+                    oContent.setValue("");
+                    oStars.setValue(5);
+                    this._loadCurrentUserData();
+                }.bind(this),
+                error: function () {
+                    MessageBox.error("Failed to submit recommendation.");
+                }
+            });
+        },
+
+        onSaveSkill: function () {
+            var oView = this.getView();
+            var oModel = this.getOwnerComponent().getModel() || oView.getModel();
+
+            var oSkill = Fragment.byId(oView.getId(), "cbSkill");
+            var oRating = Fragment.byId(oView.getId(), "riSkillRating");
+            var oDate = Fragment.byId(oView.getId(), "dpLastUsed");
+
+            var sSkillId = oSkill.getSelectedKey();
+            var iRating = Math.round(oRating.getValue() || 0);
+            var sLastUsed = oDate.getValue();
+            var sEmployeeId = this._sCurrentEmployeeId;
+
+            if (!sEmployeeId) {
+                MessageBox.warning("Current employee ID is missing.");
+                return;
+            }
+            if (!sSkillId || !sLastUsed || iRating < 1) {
+                MessageBox.warning("Please select skill, rating and date.");
+                return;
+            }
+
+            var sReadPath = "/EmployeeSkills?$filter=employee_ID eq '" + sEmployeeId + "' and skill_ID eq '" + sSkillId + "'";
+            oModel.read(sReadPath, {
+                success: function (oData) {
+                    var aRows = (oData && oData.results) ? oData.results : [];
+
+                    if (aRows.length > 0) {
+                        oModel.update("/EmployeeSkills('" + aRows[0].ID + "')", {
+                            rating: iRating,
+                            lastUsed: sLastUsed
+                        }, {
+                            success: function () {
+                                MessageToast.show("Skill updated.");
+                                this.onCloseSkillDialog();
+                                this._loadCurrentUserData();
+                            }.bind(this),
+                            error: function () {
+                                MessageBox.error("Failed to update skill.");
+                            }
+                        });
+                    } else {
+                        oModel.create("/EmployeeSkills", {
+                            employee_ID: sEmployeeId,
+                            skill_ID: sSkillId,
+                            rating: iRating,
+                            lastUsed: sLastUsed
+                        }, {
+                            success: function () {
+                                MessageToast.show("Skill added.");
+                                this.onCloseSkillDialog();
+                                this._loadCurrentUserData();
+                            }.bind(this),
+                            error: function () {
+                                MessageBox.error("Failed to add skill.");
+                            }
+                        });
+                    }
+                }.bind(this),
+                error: function () {
+                    MessageBox.error("Failed to check existing skill.");
+                }
+            });
+        },
+
+        onUploadCv: function () {
   var oView = this.getView();
-  var oModel = this.getOwnerComponent().getModel() || oView.getModel();
+  var oUploader = Fragment.byId(oView.getId(), "fuCv");
+  var oFile = oUploader && oUploader.oFileUpload && oUploader.oFileUpload.files && oUploader.oFileUpload.files[0];
 
-  var oFirstName = Fragment.byId(oView.getId(), "inpFirstName");
-  var oLastName = Fragment.byId(oView.getId(), "inpLastName");
-  var oEmail = Fragment.byId(oView.getId(), "inpEmail");
-  var oExperience = Fragment.byId(oView.getId(), "inpExperience");
-  var oDateOfBirth = Fragment.byId(oView.getId(), "dpDateOfBirth");
-
-  var sFirstName = (oFirstName.getValue() || "").trim();
-  var sLastName = (oLastName.getValue() || "").trim();
-  var sEmail = (oEmail.getValue() || "").trim();
-  var iExperience = parseInt(oExperience.getValue()) || 0;
-  
-  // Get raw string value from DatePicker
-  var sDateOfBirth = oDateOfBirth.getValue();
-  
-  // If it's still a Date object, format it
-  if (sDateOfBirth instanceof Date) {
-    sDateOfBirth = this._formatDate(sDateOfBirth);
-  }
-
-  if (!sFirstName || !sLastName || !sEmail) {
-    MessageBox.warning("Please fill in all required fields.");
+  if (!oFile) {
+    MessageBox.warning("Please choose a CV file.");
     return;
   }
 
-  var sEmployeeId = this._sCurrentEmployeeId;
-  var oPayload = {
-    firstName: sFirstName,
-    lastName: sLastName,
-    email: sEmail,
-    experience: iExperience,
-    dateOfBirth: sDateOfBirth || null
-  };
+  if (!this._sCurrentEmployeeId) {
+    MessageBox.warning("Current employee ID is missing.");
+    return;
+  }
 
-  console.log("Sending payload:", oPayload);
+  var oProgress = Fragment.byId(oView.getId(), "piUploadProgress");
+  var oBtnUpload = Fragment.byId(oView.getId(), "btnUploadCv");
+  
+  oProgress.setVisible(true);
+  oProgress.setPercentValue(0);
+  oBtnUpload.setEnabled(false);
 
-  oModel.update("/Employees('" + sEmployeeId + "')", oPayload, {
-    success: function () {
-      MessageToast.show("Profile updated successfully.");
-      this.onCloseEditProfileDialog();
-      this._loadCurrentUserData();
-    }.bind(this),
-    error: function (oErr) {
-      console.error("Update error:", oErr);
-      MessageBox.error("Failed to update profile.");
-    }
-  });
+  var oFormData = new FormData();
+  oFormData.append("file", oFile);
+  oFormData.append("employeeID", this._sCurrentEmployeeId);
+
+  fetch("/cv/upload", {
+    method: "POST",
+    body: oFormData
+  })
+    .then(function (res) {
+      oProgress.setPercentValue(100);
+      
+      if (!res.ok) {
+        throw new Error(res.statusText);
+      }
+      return res.json();
+    })
+    .then(function (data) {
+      MessageToast.show("CV uploaded successfully!");
+      oUploader.clear();
+      setTimeout(function () {
+        this.onCloseCvDialog();
+      }.bind(this), 500);
+    }.bind(this))
+    .catch(function (err) {
+      console.error("CV upload error:", err);
+      MessageBox.error("Failed to upload CV: " + err.message);
+    })
+    .finally(function () {
+      oProgress.setVisible(false);
+      oBtnUpload.setEnabled(true);
+    });
 },
 
-    onOpenAddReview: async function () {
-      if (!this._oAddReviewDialog) {
-        this._oAddReviewDialog = await Fragment.load({
-          id: this.getView().getId(),
-          name: "userview.view.fragments.AddReviewDialog",
-          controller: this
-        });
-        this.getView().addDependent(this._oAddReviewDialog);
-      }
-      this._oAddReviewDialog.open();
-    },
+onUploadCvComplete: function (oEvent) {
+  var oUploader = oEvent.getSource();
+  var iStatus = oEvent.getParameter("status");
 
-    onOpenEditSkills: async function () {
-      if (!this._oEditSkillsDialog) {
-        this._oEditSkillsDialog = await Fragment.load({
-          id: this.getView().getId(),
-          name: "userview.view.fragments.EditSkillsDialog",
-          controller: this
-        });
-        this.getView().addDependent(this._oEditSkillsDialog);
-      }
-      this._oEditSkillsDialog.open();
-    },
-
-    onOpenUploadCV: async function () {
-      if (!this._oUploadCvDialog) {
-        this._oUploadCvDialog = await Fragment.load({
-          id: this.getView().getId(),
-          name: "userview.view.fragments.UploadCVDialog",
-          controller: this
-        });
-        this.getView().addDependent(this._oUploadCvDialog);
-      }
-      this._oUploadCvDialog.open();
-    },
-
-    onCloseReviewDialog: function () {
-      if (this._oAddReviewDialog) this._oAddReviewDialog.close();
-    },
-
-    onCloseSkillDialog: function () {
-      if (this._oEditSkillsDialog) this._oEditSkillsDialog.close();
-    },
-
-    onCloseCvDialog: function () {
-      if (this._oUploadCvDialog) this._oUploadCvDialog.close();
-    },
-
-    onSubmitReview: function () {
-      var oView = this.getView();
-      var oModel = this.getOwnerComponent().getModel() || oView.getModel();
-
-      var oEmp = Fragment.byId(oView.getId(), "cbReviewEmployee");
-      var oTitle = Fragment.byId(oView.getId(), "inpReviewTitle");
-      var oContent = Fragment.byId(oView.getId(), "taReviewContent");
-      var oStars = Fragment.byId(oView.getId(), "riReviewStars");
-
-      var sEmployeeId = oEmp.getSelectedKey();
-      var sTitle = (oTitle.getValue() || "").trim();
-      var sContent = (oContent.getValue() || "").trim();
-      var iStars = Math.round(oStars.getValue() || 0);
-
-      if (!sEmployeeId || !sTitle || !sContent || iStars < 1) {
-        MessageBox.warning("Please complete all review fields.");
-        return;
-      }
-
-      oModel.create("/Reviews", {
-        title: sTitle,
-        content: sContent,
-        stars: iStars,
-        employee_ID: sEmployeeId
-      }, {
-        success: function () {
-          MessageToast.show("Recommendation submitted.");
-          this.onCloseReviewDialog();
-          oEmp.setSelectedKey("");
-          oTitle.setValue("");
-          oContent.setValue("");
-          oStars.setValue(5);
-          this._loadCurrentUserData();
-        }.bind(this),
-        error: function () {
-          MessageBox.error("Failed to submit recommendation.");
-        }
-      });
-    },
-
-    onSaveSkill: function () {
-      var oView = this.getView();
-      var oModel = this.getOwnerComponent().getModel() || oView.getModel();
-
-      var oSkill = Fragment.byId(oView.getId(), "cbSkill");
-      var oRating = Fragment.byId(oView.getId(), "riSkillRating");
-      var oDate = Fragment.byId(oView.getId(), "dpLastUsed");
-
-      var sSkillId = oSkill.getSelectedKey();
-      var iRating = Math.round(oRating.getValue() || 0);
-      var sLastUsed = oDate.getValue();
-      var sEmployeeId = this._sCurrentEmployeeId;
-
-      if (!sEmployeeId) {
-        MessageBox.warning("Current employee ID is missing.");
-        return;
-      }
-      if (!sSkillId || !sLastUsed || iRating < 1) {
-        MessageBox.warning("Please select skill, rating and date.");
-        return;
-      }
-
-      var sReadPath = "/EmployeeSkills?$filter=employee_ID eq '" + sEmployeeId + "' and skill_ID eq '" + sSkillId + "'";
-      oModel.read(sReadPath, {
-        success: function (oData) {
-          var aRows = (oData && oData.results) ? oData.results : [];
-
-          if (aRows.length > 0) {
-            oModel.update("/EmployeeSkills('" + aRows[0].ID + "')", {
-              rating: iRating,
-              lastUsed: sLastUsed
-            }, {
-              success: function () {
-                MessageToast.show("Skill updated.");
-                this.onCloseSkillDialog();
-                this._loadCurrentUserData();
-              }.bind(this),
-              error: function () {
-                MessageBox.error("Failed to update skill.");
-              }
-            });
-          } else {
-            oModel.create("/EmployeeSkills", {
-              employee_ID: sEmployeeId,
-              skill_ID: sSkillId,
-              rating: iRating,
-              lastUsed: sLastUsed
-            }, {
-              success: function () {
-                MessageToast.show("Skill added.");
-                this.onCloseSkillDialog();
-                this._loadCurrentUserData();
-              }.bind(this),
-              error: function () {
-                MessageBox.error("Failed to add skill.");
-              }
-            });
-          }
-        }.bind(this),
-        error: function () {
-          MessageBox.error("Failed to check existing skill.");
-        }
-      });
-    },
-
-    onUploadCv: function () {
-      var oView = this.getView();
-      var oUploader = Fragment.byId(oView.getId(), "fuCv");
-      var oFile = oUploader && oUploader.oFileUpload && oUploader.oFileUpload.files && oUploader.oFileUpload.files[0];
-
-      if (!oFile) {
-        MessageBox.warning("Please choose a CV file.");
-        return;
-      }
-
-      if (!this._sCurrentEmployeeId) {
-        MessageBox.warning("Current employee ID is missing.");
-        return;
-      }
-
-      var oFormData = new FormData();
-      oFormData.append("file", oFile);
-      oFormData.append("employeeID", this._sCurrentEmployeeId);
-
-      fetch("/cv/upload", {
-        method: "POST",
-        body: oFormData
-      })
-        .then(function (res) {
-          if (!res.ok) throw new Error("Upload failed");
-          MessageToast.show("CV uploaded.");
-          oUploader.clear();
-          this.onCloseCvDialog();
-        }.bind(this))
-        .catch(function () {
-          MessageBox.error("CV upload failed.");
-        });
-    }
-  });
+  if (iStatus === 200 || iStatus === 201) {
+    MessageToast.show("CV uploaded successfully!");
+    oUploader.clear();
+    this.onCloseCvDialog();
+  } else {
+    MessageBox.error("CV upload failed with status: " + iStatus);
+  }
+}
+    });
 });
