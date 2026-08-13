@@ -1,0 +1,49 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+>
+    <Dialog
+        id="reassignDialog"
+        title="{i18n>reassignTitle}"
+        contentWidth="30rem"
+        draggable="true"
+    >
+        <content>
+            <VBox id="reassignBox" class="sapUiMediumMargin">
+                <Text id="reassignInfo" text="{reassign>/message}" />
+
+                <Label
+                    id="lblReassignTarget"
+                    text="{i18n>reassignTarget}"
+                    required="true"
+                    class="sapUiSmallMarginTop"
+                />
+                <ComboBox
+                    id="reassignTarget"
+                    width="100%"
+                    items="{/Departments}"
+                    placeholder="{i18n>selectDepartment}"
+                >
+                    <core:Item key="{ID}" text="{name}" />
+                </ComboBox>
+            </VBox>
+        </content>
+
+        <beginButton>
+            <Button
+                id="btnConfirmReassign"
+                text="{i18n>reassignConfirm}"
+                type="Reject"
+                press=".onConfirmReassign"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancelReassign"
+                text="{i18n>cancel}"
+                type="Transparent"
+                press=".onCloseReassignDialog"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>
