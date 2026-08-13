@@ -5,11 +5,15 @@
         <Label text="Your Skills" />
         <List id="skillsList" items="{view>/currentUser/skills}" inset="false" itemPress=".onSelectEmployeeSkill">
           <items>
-            <CustomListItem>
+            <CustomListItem type="Active">
               <HBox justifyContent="SpaceBetween" alignItems="Center" width="100%">
                 <VBox>
                   <Text text="{view>skill/name}" wrapping="false" />
-                  <Text text="Rating: {view>rating}, Last used: {view>lastUsed}" class="sapUiSmallMarginTop" wrapping="false" />
+                  <Text text="Rating: {view>rating}, Last used: {
+                          path: 'view>lastUsed',
+                          type: 'sap.ui.model.type.Date',
+                          formatOptions: { pattern: 'yyyy-MM-dd', UTC: false }
+                        }" class="sapUiSmallMarginTop" wrapping="false" />
                 </VBox>
                 <Button icon="sap-icon://delete" type="Reject" tooltip="Delete skill"
                         press=".onDeleteSkill">

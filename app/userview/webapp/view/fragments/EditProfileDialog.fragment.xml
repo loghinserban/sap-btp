@@ -15,11 +15,12 @@
         <Input id="inpExperience" width="100%" value="{view>/currentUser/experience}" type="Number" />
 
         <Label text="Date of Birth" class="sapUiSmallMarginTop" />
-        <DatePicker 
-          id="dpDateOfBirth" 
-          width="100%" 
+        <DatePicker
+          id="dpDateOfBirth"
+          width="100%"
           valueFormat="yyyy-MM-dd"
           displayFormat="long"
+          dateValue="{view>/currentUser/dateOfBirth}"
         />
       </VBox>
     </content>
@@ -27,7 +28,7 @@
       <Button text="Save" type="Emphasized" press=".onSaveProfile"/>
     </beginButton>
     <endButton>
-      <Button text="Cancel" press=".onCloseEditProfileDialog"/>
+      <Button text="Cancel" press=".onCancelEditProfile"/>
     </endButton>
   </Dialog>
 </core:FragmentDefinition>

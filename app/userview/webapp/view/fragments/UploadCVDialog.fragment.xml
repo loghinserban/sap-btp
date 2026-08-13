@@ -13,7 +13,7 @@
           uploadUrl="/cv/upload"
           uploadOnChange="false"
           sendXHR="true"
-          uploadComplete=".onUploadCvComplete"
+          change=".onCvFileChange"
         />
         
         <ProgressIndicator 
