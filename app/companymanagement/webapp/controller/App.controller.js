@@ -1,12 +1,8 @@
 sap.ui.define([
-  "sap/ui/core/mvc/Controller",
-  "sap/m/MessageToast"
-], (BaseController, MessageToast) => {
+  "sap/ui/core/mvc/Controller"
+], (Controller) => {
   "use strict";
 
-  return BaseController.extend("companymanagement.controller.App", {
-      onInit() {
-      },
-
+  return Controller.extend("companymanagement.controller.App", {
   });
 });
