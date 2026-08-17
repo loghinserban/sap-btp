@@ -1,0 +1,129 @@
+const Anthropic = require('@anthropic-ai/sdk');
+
+const client = new Anthropic();
+
+const MODEL = 'claude-haiku-4-5';
+
+const SKILLS_SCHEMA = {
+  type: 'object',
+  properties: {
+    skills: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          skillID: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          name: { type: 'string' },
+          rating: { type: 'integer', enum: [1, 2, 3, 4, 5] },
+          lastUsed: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+          evidence: { type: 'string' }
+        },
+        required: ['skillID', 'name', 'rating', 'lastUsed', 'evidence'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['skills'],
+  additionalProperties: false
+};
+
+const SYSTEM = `You read a CV and extract only the professional skills it demonstrates, for the author's own skills profile in an HR database.
+
+Rating scale, applied from evidence in the CV:
+1 = listed or mentioned only
+2 = used under supervision, in coursework, or in a personal project
+3 = used independently on real work
+4 = used on complex, long-running, or large-scale work
+5 = led, taught, or is cited as the expert
+
+Rules:
+- skillID: match against the catalog below. Use the exact ID when the CV names the
+  same technology under any alias or version ("Node", "Node.js 20" -> Node.js).
+  Use null when nothing in the catalog matches; do not force a near-match.
+- name: the skill as the CV writes it, in its conventional casing.
+- lastUsed: the last month the CV shows the skill in use, as YYYY-MM-01.
+  Use null when the CV gives no date for that skill.
+- evidence: the phrase or role you based the rating on, under 200 characters.
+- Extract technical and professional skills only: languages, frameworks, tools,
+  platforms, methodologies, spoken languages. Skip job titles, employers, degrees,
+  and generic traits such as "team player" or "hard working".
+- List each skill once. Extract only what the CV actually claims; never invent a
+  skill, a rating, or a date that the CV does not support.`;
+
+function buildCatalogText(catalog) {
+  const lines = [];
+  for (let i = 0; i < catalog.length; i++) {
+    lines.push(catalog[i].ID + '\t' + catalog[i].name);
+  }
+  return lines.join('\n');
+}
+
+function findText(blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'text') {
+      return blocks[i].text;
+    }
+  }
+  return null;
+}
+
+function buildDocument(fileName, contentBase64) {
+  const parts = String(fileName || '').split('.');
+  const extension = parts[parts.length - 1].toLowerCase();
+
+  if (extension === 'pdf') {
+    return {
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: contentBase64 }
+    };
+  }
+
+  if (extension === 'txt' || extension === 'md') {
+    const text = Buffer.from(contentBase64, 'base64').toString('utf8');
+    if (!text.trim()) {
+      throw new Error('The file is empty.');
+    }
+    return { type: 'text', text: 'CV:\n\n' + text };
+  }
+
+  throw new Error('Unsupported file type ".' + extension + '". Please upload the CV as PDF or TXT.');
+}
+
+async function extractCvSkills(options) {
+  const fileName = options.fileName;
+  const contentBase64 = options.contentBase64;
+  const catalog = options.catalog || [];
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 8000,
+    system: SYSTEM + '\n\nSkill catalog (ID<TAB>name):\n' + buildCatalogText(catalog),
+    output_config: {
+      format: { type: 'json_schema', schema: SKILLS_SCHEMA }
+    },
+    messages: [{
+      role: 'user',
+      content: [
+        buildDocument(fileName, contentBase64),
+        { type: 'text', text: 'Extract the skills from this CV.' }
+      ]
+    }]
+  });
+
+  if (response.stop_reason === 'refusal') {
+    throw new Error('Claude declined to process this document.');
+  }
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error('The CV produced more skills than fit in one response. Try a shorter CV.');
+  }
+
+  const text = findText(response.content);
+  if (!text) {
+    throw new Error('Claude returned no text content.');
+  }
+
+  const parsed = JSON.parse(text);
+  return parsed.skills || [];
+}
+
+module.exports = { extractCvSkills };

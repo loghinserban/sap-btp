@@ -1,7 +1,6 @@
 sap.ui.define([
-    "sap/ui/core/UIComponent",
-    "companymanagement/model/models"
-], (UIComponent, models) => {
+    "sap/ui/core/UIComponent"
+], (UIComponent) => {
     "use strict";
 
     return UIComponent.extend("companymanagement.Component", {
@@ -15,9 +14,6 @@ sap.ui.define([
         init() {
             // call the base component's init function
             UIComponent.prototype.init.apply(this, arguments);
-
-            // set the device model
-            this.setModel(models.createDeviceModel(), "device");
 
             // enable routing
             this.getRouter().initialize();

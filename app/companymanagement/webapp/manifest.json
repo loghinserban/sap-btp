@@ -78,6 +78,7 @@
         "sap.ui.core": {},
         "sap.ui.comp": {},
         "sap.ui.layout": {},
+        "sap.ui.unified":{},
         "sap.uxap": {}
       }
     },
@@ -104,23 +105,7 @@
           "autoExpandSelect": true,
           "earlyRequests": true
         }
-      },
-      "v4": {
-        "dataSource": "mainService",
-        "preload": true,
-        "settings": {
-          "operationMode": "Server",
-          "autoExpandSelect": true,
-          "earlyRequests": true
-        }
       }
-    },
-    "resources": {
-      "css": [
-        {
-          "uri": "css/style.css"
-        }
-      ]
     },
     "routing": {
       "config": {
