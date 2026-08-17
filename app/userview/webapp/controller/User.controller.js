@@ -56,6 +56,9 @@ sap.ui.define([
             });
             this.getView().setModel(oViewModel, "view");
 
+            // Holds the skills read out of an uploaded CV until the user confirms them.
+            this.getView().setModel(new JSONModel({ hasResults: false, skills: [] }), "cv");
+
             var oModel = this._getModel();
             if (!oModel) {
                 MessageBox.error("OData model not initialized.");
@@ -280,7 +283,7 @@ sap.ui.define([
 
         onOpenUploadCV: async function () {
             var oDialog = await this._loadDialog("_oUploadCvDialog", "userview.view.fragments.UploadCVDialog");
-            this._oSelectedCvFile = null;
+            this._resetCvDialog();
             oDialog.open();
         },
 
@@ -534,12 +537,75 @@ sap.ui.define([
             });
         },
 
+        // --- CV skill import ------------------------------------------------
+
+        _resetCvDialog: function () {
+            this._oSelectedCvFile = null;
+
+            var oUploader = Fragment.byId(this.getView().getId(), "fuCv");
+            if (oUploader) oUploader.clear();
+
+            this.getView().getModel("cv").setData({ hasResults: false, skills: [] });
+        },
+
         onCvFileChange: function (oEvent) {
             var aFiles = oEvent.getParameter("files");
             this._oSelectedCvFile = (aFiles && aFiles[0]) || null;
+            // A new file invalidates whatever the previous one produced.
+            this.getView().getModel("cv").setData({ hasResults: false, skills: [] });
         },
 
-        onUploadCv: function () {
+        onCvTypeMismatch: function (oEvent) {
+            this._oSelectedCvFile = null;
+            MessageBox.warning(
+                "\"" + oEvent.getParameter("fileType") + "\" is not supported. " +
+                "Please upload the CV as PDF or TXT."
+            );
+        },
+
+        onCvFileSizeExceed: function () {
+            this._oSelectedCvFile = null;
+            MessageBox.warning("The CV must be 10MB or smaller.");
+        },
+
+        // The base64 payload is far too long for a URL parameter, so the actions are
+        // called on the V4 endpoint, which takes them in the request body.
+        _callAction: function (sAction, oPayload) {
+            return fetch("/odata/v4/catalog/" + sAction, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(oPayload)
+            }).then(function (oResponse) {
+                return oResponse.json()
+                    .catch(function () { return null; })
+                    .then(function (oBody) {
+                        if (!oResponse.ok) {
+                            var sMessage = (oBody && oBody.error && oBody.error.message) ||
+                                (oResponse.status + " " + oResponse.statusText);
+                            throw new Error(sMessage);
+                        }
+                        // Collection-valued actions come back wrapped in "value".
+                        return oBody && oBody.value !== undefined ? oBody.value : oBody;
+                    });
+            });
+        },
+
+        _readFileAsBase64: function (oFile) {
+            return new Promise(function (resolve, reject) {
+                var oReader = new FileReader();
+                oReader.onload = function () {
+                    var sResult = String(oReader.result || "");
+                    // Strip the "data:<mime>;base64," prefix.
+                    resolve(sResult.slice(sResult.indexOf(",") + 1));
+                };
+                oReader.onerror = function () {
+                    reject(oReader.error || new Error("Could not read the file."));
+                };
+                oReader.readAsDataURL(oFile);
+            });
+        },
+
+        onAnalyzeCv: async function () {
             var oView = this.getView();
             var oUploader = Fragment.byId(oView.getId(), "fuCv");
             var oFile = this._oSelectedCvFile ||
@@ -550,49 +616,77 @@ sap.ui.define([
                 return;
             }
 
+            var oCvModel = oView.getModel("cv");
+            this._oUploadCvDialog.setBusy(true);
+
+            try {
+                var sBase64 = await this._readFileAsBase64(oFile);
+                var aSkills = await this._callAction("extractCvSkills", {
+                    fileName: oFile.name,
+                    contentBase64: sBase64
+                });
+
+                aSkills = (aSkills || []).map(function (oSkill) {
+                    // Everything found is pre-ticked; the user unticks what does not fit.
+                    return Object.assign({ selected: true }, oSkill);
+                });
+
+                oCvModel.setData({ hasResults: true, skills: aSkills });
+
+                if (aSkills.length === 0) {
+                    MessageBox.information("No skills could be read from this CV.");
+                } else {
+                    MessageToast.show(aSkills.length + " skill(s) found. Review them before adding.");
+                }
+            } catch (oErr) {
+                console.error("CV skill extraction failed:", oErr);
+                MessageBox.error("Could not read skills from the CV: " + oErr.message);
+            } finally {
+                this._oUploadCvDialog.setBusy(false);
+            }
+        },
+
+        onApplyCvSkills: async function () {
             if (!this._sCurrentEmployeeId) {
                 MessageBox.warning("Current employee ID is missing.");
                 return;
             }
 
-            var oProgress = Fragment.byId(oView.getId(), "piUploadProgress");
-            var oBtnUpload = Fragment.byId(oView.getId(), "btnUploadCv");
-
-            oProgress.setVisible(true);
-            oProgress.setPercentValue(0);
-            oBtnUpload.setEnabled(false);
-
-            var oFormData = new FormData();
-            oFormData.append("file", oFile);
-            oFormData.append("employeeID", this._sCurrentEmployeeId);
-
-            fetch("/cv/upload", {
-                method: "POST",
-                body: oFormData
-            })
-                .then(function (res) {
-                    oProgress.setPercentValue(100);
-                    if (!res.ok) {
-                        throw new Error(res.status + " " + res.statusText);
-                    }
-                    return res.json();
-                })
-                .then(function () {
-                    MessageToast.show("CV uploaded successfully!");
-                    oUploader.clear();
-                    this._oSelectedCvFile = null;
-                    this.onCloseCvDialog();
-                    // The parser may have written new skills for this employee.
-                    this._loadCurrentUserData();
-                }.bind(this))
-                .catch(function (err) {
-                    console.error("CV upload error:", err);
-                    MessageBox.error("Failed to upload CV: " + err.message);
-                })
-                .finally(function () {
-                    oProgress.setVisible(false);
-                    oBtnUpload.setEnabled(true);
+            var aSelected = (this.getView().getModel("cv").getProperty("/skills") || [])
+                .filter(function (oSkill) { return oSkill.selected; })
+                .map(function (oSkill) {
+                    return {
+                        skillID: oSkill.skillID || null,
+                        name: oSkill.name,
+                        rating: Math.round(oSkill.rating) || 3,
+                        lastUsed: oSkill.lastUsed || null,
+                        evidence: oSkill.evidence || ""
+                    };
                 });
+
+            if (aSelected.length === 0) {
+                MessageBox.warning("Please tick at least one skill to add.");
+                return;
+            }
+
+            this._oUploadCvDialog.setBusy(true);
+
+            try {
+                var oResult = await this._callAction("applyCvSkills", {
+                    employeeID: this._sCurrentEmployeeId,
+                    skills: aSelected
+                });
+
+                MessageToast.show((oResult && oResult.message) || "Skills imported.");
+                this._resetCvDialog();
+                this.onCloseCvDialog();
+                this._loadCurrentUserData();
+            } catch (oErr) {
+                console.error("Apply CV skills failed:", oErr);
+                MessageBox.error("Could not add the skills: " + oErr.message);
+            } finally {
+                this._oUploadCvDialog.setBusy(false);
+            }
         },
 
         // Formats a Date as the calendar day the user picked, without a UTC round trip.

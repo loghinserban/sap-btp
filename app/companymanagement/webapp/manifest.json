@@ -78,6 +78,7 @@
         "sap.ui.core": {},
         "sap.ui.comp": {},
         "sap.ui.layout": {},
+        "sap.ui.unified":{},
         "sap.uxap": {}
       }
     },

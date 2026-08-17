@@ -1,0 +1,128 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:u="sap.ui.unified"
+    xmlns:form="sap.ui.layout.form"
+>
+    <Dialog
+        id="cvDialog"
+        title="{i18n>cvDialogTitle}"
+        contentWidth="56rem"
+        draggable="true"
+        busy="{cv>/busy}"
+    >
+        <content>
+            <HBox id="cvUploadBox" class="sapUiSmallMargin" alignItems="Center" >
+                <u:FileUploader
+                    id="cvFileUploader"
+                    name="cv"
+                    fileType="pdf"
+                    mimeType="application/pdf"
+                    maximumFileSize="20"
+                    placeholder="{i18n>cvSelectFile}"
+                    buttonText="{i18n>cvSelectFile}"
+                    change=".onCvFileSelected"
+                    typeMissmatch=".onCvTypeMismatch"
+                    fileSizeExceed=".onCvFileSizeExceed"
+                    width="26rem"
+                />
+                <Button
+                    id="btnCvExtract"
+                    text="{i18n>cvExtract}"
+                    type="Emphasized"
+                    icon="sap-icon://ai"
+                    press=".onCvExtract"
+                    class="sapUiTinyMarginBegin"
+                />
+            </HBox>
+
+            <form:SimpleForm
+                id="cvProfileForm"
+                layout="ColumnLayout"
+                columnsM="2"
+                columnsL="2"
+                columnsXL="2"
+                editable="true"
+                visible="{= !!${cv>/profile} }"
+            >
+                <Label id="lblCvFirstName" text="{i18n>firstName}" />
+                <Input id="cvFirstName" value="{cv>/profile/firstName}" />
+
+                <Label id="lblCvLastName" text="{i18n>lastName}" />
+                <Input id="cvLastName" value="{cv>/profile/lastName}" />
+
+                <Label id="lblCvEmail" text="{i18n>email}" />
+                <Input id="cvEmail" value="{cv>/profile/email}" />
+
+                <Label id="lblCvExperience" text="{i18n>experience}" />
+                <Input id="cvExperience" value="{cv>/profile/experience}" type="Number" />
+
+                <Label id="lblCvDepartment" text="{i18n>department}" />
+                <ComboBox
+                    id="cvDepartment"
+                    selectedKey="{cv>/departmentID}"
+                    items="{ path: '/Departments', sorter: { path: 'name' } }"
+                >
+                    <core:Item key="{ID}" text="{name}" />
+                </ComboBox>
+            </form:SimpleForm>
+
+            <Table
+                id="cvSkillsTable"
+                items="{cv>/profile/skills}"
+                visible="{= !!${cv>/profile} }"
+                class="sapUiSmallMarginTop"
+            >
+                <columns>
+                    <Column id="colCvTake" width="4rem"><Text id="txtColCvTake" text="{i18n>cvColTake}" /></Column>
+                    <Column id="colCvSkill" width="14rem"><Text id="txtColCvSkill" text="{i18n>cvColSkill}" /></Column>
+                    <Column id="colCvRating" width="9rem"><Text id="txtColCvRating" text="{i18n>cvColRating}" /></Column>
+                    <Column id="colCvLastUsed" width="9rem"><Text id="txtColCvLastUsed" text="{i18n>cvColLastUsed}" /></Column>
+                    <Column id="colCvEvidence"><Text id="txtColCvEvidence" text="{i18n>cvColEvidence}" /></Column>
+                </columns>
+                <items>
+                    <ColumnListItem id="cvSkillRow">
+                        <cells>
+                            <CheckBox id="cvSkillTake" selected="{cv>selected}" />
+                            <ComboBox
+                                id="cvSkillSelect"
+                                width="100%"
+                                selectedKey="{cv>skillID}"
+                                value="{cv>name}"
+                                items="{ path: '/Skills', sorter: { path: 'name' } }"
+                            >
+                                <core:Item key="{ID}" text="{name}" />
+                            </ComboBox>
+                            <RatingIndicator id="cvSkillRating" maxValue="5" value="{cv>rating}" editable="true" />
+                            <DatePicker
+                                id="cvSkillLastUsed"
+                                value="{cv>lastUsed}"
+                                valueFormat="yyyy-MM-dd"
+                                displayFormat="MM.yyyy"
+                            />
+                            <Text id="cvSkillEvidence" text="{cv>evidence}" maxLines="2" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </content>
+
+        <beginButton>
+            <Button
+                id="btnCvCreate"
+                text="{i18n>cvCreateEmployee}"
+                type="Emphasized"
+                enabled="{= !!${cv>/profile} }"
+                press=".onCvCreateEmployee"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCvCancel"
+                text="{i18n>cancel}"
+                type="Transparent"
+                press=".onCloseCvDialog"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

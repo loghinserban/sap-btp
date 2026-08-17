@@ -2,6 +2,7 @@
   "name": "project",
   "version": "1.0.0",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
     "@cap-js/hana": "^2",
     "@sap/cds": "^9",
     "@sap/cds-odata-v2-adapter-proxy": "^1.9.21"
@@ -29,6 +30,11 @@
       },
       "destinations": true,
       "html5-repo": true
+    },
+    "server": {
+      "body_parser": {
+        "limit": "30mb"
+      }
     }
   },
   "workspaces": [

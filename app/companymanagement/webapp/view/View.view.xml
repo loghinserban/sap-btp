@@ -73,6 +73,23 @@
                                 </layoutData>
                             </Button>
 
+
+                            <Button
+                                id="btnUploadCv"
+                                text="{i18n>uploadCv}"
+                                type="Transparent"
+                                icon="sap-icon://upload"
+                                press=".onOpenUploadCvDialog"
+                            >
+                             <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnUploadCvLayout"
+                                        priority="Low"
+                                    />
+                                </layoutData>
+                            
+                            </Button>
+
                             <Button
                                 id="btnSeedData"
                                 text="{i18n>seedData}"
