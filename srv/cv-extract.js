@@ -1,7 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const { properties } = require('@sap/cds/lib/compile/load');
 
-const client = new Anthropic(); // read api key
+const client = new Anthropic();
 
 const CV_SCHEMA = {
     type: 'object',
@@ -30,7 +29,6 @@ const CV_SCHEMA = {
     additionalProperties: false
 };
 
-
 const SYSTEM = `You read a candidate's CV and extract their profile and skills for an HR skills database.
 
 Rating scale, applied from evidence in the CV:
@@ -51,39 +49,62 @@ Rules:
 - experience: total years of professional work, rounded down.
 - Extract only what the CV actually claims. Never invent skills, dates, or contact details.`;
 
-async function extractCvProfile({ contentBase64, catalog }) {
-  const catalogText = catalog.map((s) => `${s.ID}\t${s.name}`).join('\n');
+function buildCatalogText(catalog) {
+    const lines = [];
+    for (let i = 0; i < catalog.length; i++) {
+        lines.push(catalog[i].ID + '\t' + catalog[i].name);
+    }
+    return lines.join('\n');
+}
 
-  const response = await client.beta.messages.create({
-    model: 'claude-opus-5',
-    max_tokens: 16000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-    system: `${SYSTEM}\n\nSkill catalog (ID<TAB>name):\n${catalogText}`,
-    output_config: {
-      effort: 'medium',
-      format: { type: 'json_schema', schema: CV_SCHEMA }
-    },
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'document',
-          source: { type: 'base64', media_type: 'application/pdf', data: contentBase64 }
+function findText(blocks) {
+    for (let i = 0; i < blocks.length; i++) {
+        if (blocks[i].type === 'text') {
+            return blocks[i].text;
+        }
+    }
+    return null;
+}
+
+async function extractCvProfile(options) {
+    const contentBase64 = options.contentBase64;
+    const catalog = options.catalog || [];
+
+    const response = await client.beta.messages.create({
+        model: 'claude-opus-5',
+        max_tokens: 16000,
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+        system: SYSTEM + '\n\nSkill catalog (ID<TAB>name):\n' + buildCatalogText(catalog),
+        output_config: {
+            effort: 'medium',
+            format: { type: 'json_schema', schema: CV_SCHEMA }
         },
-        { type: 'text', text: 'Extract the profile and skills from this CV.' }
-      ]
-    }]
-  });
+        messages: [{
+            role: 'user',
+            content: [
+                {
+                    type: 'document',
+                    source: { type: 'base64', media_type: 'application/pdf', data: contentBase64 }
+                },
+                { type: 'text', text: 'Extract the profile and skills from this CV.' }
+            ]
+        }]
+    });
 
-  if (response.stop_reason === 'refusal') {
-    throw new Error('Claude declined to process this document.');
-  }
+    if (response.stop_reason === 'refusal') {
+        throw new Error('Claude declined to process this document.');
+    }
+    if (response.stop_reason === 'max_tokens') {
+        throw new Error('The CV produced more data than fit in one response. Try a shorter CV.');
+    }
 
-  const text = response.content.find((b) => b.type === 'text')?.text;
-  if (!text) throw new Error('Claude returned no text content.');
+    const text = findText(response.content);
+    if (!text) {
+        throw new Error('Claude returned no text content.');
+    }
 
-  return JSON.parse(text);
+    return JSON.parse(text);
 }
 
 module.exports = { extractCvProfile };

@@ -1,10 +1,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
-// Reads ANTHROPIC_API_KEY from the environment (.env / CF user-provided service).
 const client = new Anthropic();
 
-// Skill extraction is a short, well-specified reading task, so it runs on the
-// cheapest current model. Claude 3 Haiku and 3.5 Haiku are both retired.
 const MODEL = 'claude-haiku-4-5';
 
 const SKILLS_SCHEMA = {
@@ -53,42 +50,61 @@ Rules:
 - List each skill once. Extract only what the CV actually claims; never invent a
   skill, a rating, or a date that the CV does not support.`;
 
-// Anthropic accepts PDFs as document blocks; plain text is sent as text.
-// Word documents would need server-side conversion first, so they are rejected
-// with a message the user can act on rather than a parse failure.
-function buildDocumentContent(fileName, contentBase64) {
-  const ext = String(fileName || '').split('.').pop().toLowerCase();
+function buildCatalogText(catalog) {
+  const lines = [];
+  for (let i = 0; i < catalog.length; i++) {
+    lines.push(catalog[i].ID + '\t' + catalog[i].name);
+  }
+  return lines.join('\n');
+}
 
-  if (ext === 'pdf') {
+function findText(blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'text') {
+      return blocks[i].text;
+    }
+  }
+  return null;
+}
+
+function buildDocument(fileName, contentBase64) {
+  const parts = String(fileName || '').split('.');
+  const extension = parts[parts.length - 1].toLowerCase();
+
+  if (extension === 'pdf') {
     return {
       type: 'document',
       source: { type: 'base64', media_type: 'application/pdf', data: contentBase64 }
     };
   }
 
-  if (ext === 'txt' || ext === 'md') {
+  if (extension === 'txt' || extension === 'md') {
     const text = Buffer.from(contentBase64, 'base64').toString('utf8');
-    if (!text.trim()) throw new Error('The file is empty.');
-    return { type: 'text', text: `CV:\n\n${text}` };
+    if (!text.trim()) {
+      throw new Error('The file is empty.');
+    }
+    return { type: 'text', text: 'CV:\n\n' + text };
   }
 
-  throw new Error(`Unsupported file type ".${ext}". Please upload the CV as PDF or TXT.`);
+  throw new Error('Unsupported file type ".' + extension + '". Please upload the CV as PDF or TXT.');
 }
 
-async function extractCvSkills({ fileName, contentBase64, catalog }) {
-  const catalogText = (catalog || []).map((s) => `${s.ID}\t${s.name}`).join('\n');
+async function extractCvSkills(options) {
+  const fileName = options.fileName;
+  const contentBase64 = options.contentBase64;
+  const catalog = options.catalog || [];
 
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 8000,
-    system: `${SYSTEM}\n\nSkill catalog (ID<TAB>name):\n${catalogText}`,
+    system: SYSTEM + '\n\nSkill catalog (ID<TAB>name):\n' + buildCatalogText(catalog),
     output_config: {
       format: { type: 'json_schema', schema: SKILLS_SCHEMA }
     },
     messages: [{
       role: 'user',
       content: [
-        buildDocumentContent(fileName, contentBase64),
+        buildDocument(fileName, contentBase64),
         { type: 'text', text: 'Extract the skills from this CV.' }
       ]
     }]
@@ -101,8 +117,10 @@ async function extractCvSkills({ fileName, contentBase64, catalog }) {
     throw new Error('The CV produced more skills than fit in one response. Try a shorter CV.');
   }
 
-  const text = response.content.find((b) => b.type === 'text')?.text;
-  if (!text) throw new Error('Claude returned no text content.');
+  const text = findText(response.content);
+  if (!text) {
+    throw new Error('Claude returned no text content.');
+  }
 
   const parsed = JSON.parse(text);
   return parsed.skills || [];
