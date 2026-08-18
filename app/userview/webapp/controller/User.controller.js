@@ -17,6 +17,9 @@ sap.ui.define([
 ) {
     "use strict";
 
+    // Fallback profile shown when the app is opened without ?employeeId=... in the URL.
+    var DEFAULT_EMPLOYEE_ID = "003ae184-91ff-411e-a672-3b83bed81d27";
+
     // OData V2 delivers dates as "/Date(ms)/"; everything else may already be a Date or an ISO string.
     function parseODataDate(value) {
         if (value === null || value === undefined || value === "") {
@@ -153,7 +156,7 @@ sap.ui.define([
                 return sId;
             }
 
-            return localStorage.getItem("currentEmployeeId") || "";
+            return localStorage.getItem("currentEmployeeId") || DEFAULT_EMPLOYEE_ID;
         },
 
         onUserSearch: function (oEvent) {

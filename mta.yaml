@@ -119,7 +119,7 @@ resources:
             Name: srv-api
             ProxyType: Internet
             Type: HTTP
-            URL: https://${space}-srv-api.${default-domain}
+            URL: ~{srv-api/srv-url}
           existing_destinations_policy: update
       version: 1.0.0
     service: destination
