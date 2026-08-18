@@ -93,27 +93,20 @@ sap.ui.define([
                 description: this.byId("skillFormDescription").getValue().trim()
             };
 
+            const fnAfterSave = () => {
+                oModel.refresh(true);
+                this._oSkillDialog.close();
+            };
+
           // same object 2 outcomes
             if (this._sEditSkillPath) {
-                oModel.update(this._sEditSkillPath, oSkill, {
-                    success: () => {
-                        MessageToast.show(oBundle.getText("msgSkillMasterUpdated"));
-                        oModel.refresh(true);
-                        this._oSkillDialog.close();
-                    },
-                    error: () => MessageToast.show(oBundle.getText("msgSkillMasterUpdateError"))
-                });
+                oModel.update(this._sEditSkillPath, oSkill,
+                    this.crudCallbacks("msgSkillMasterUpdated", "msgSkillMasterUpdateError", fnAfterSave));
                 return;
             }
 
-            oModel.create("/Skills", oSkill, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgSkillMasterAdded"));
-                    oModel.refresh(true);
-                    this._oSkillDialog.close();
-                },
-                error: () => MessageToast.show(oBundle.getText("msgSkillMasterAddError"))
-            });
+            oModel.create("/Skills", oSkill,
+                this.crudCallbacks("msgSkillMasterAdded", "msgSkillMasterAddError", fnAfterSave));
         },
 
         onDeleteSkill: function (oEvent) {
@@ -138,13 +131,9 @@ sap.ui.define([
                         return;
                     }
 
-                    oModel.remove(sPath, {
-                        success: () => {
-                            MessageToast.show(oBundle.getText("msgSkillMasterDeleted"));
-                            oModel.refresh(true);
-                        },
-                        error: () => MessageToast.show(oBundle.getText("msgSkillMasterDeleteError"))
-                    });
+                    oModel.remove(sPath,
+                        this.crudCallbacks("msgSkillMasterDeleted", "msgSkillMasterDeleteError",
+                            () => oModel.refresh(true)));
                 }
             });
         },
@@ -212,26 +201,19 @@ sap.ui.define([
                 description: this.byId("departmentFormDescription").getValue().trim()
             };
 
+            const fnAfterSave = () => {
+                oModel.refresh(true);
+                this._oDepartmentDialog.close();
+            };
+
             if (this._sEditDepartmentPath) {
-                oModel.update(this._sEditDepartmentPath, oDepartment, {
-                    success: () => {
-                        MessageToast.show(oBundle.getText("msgDepartmentUpdated"));
-                        oModel.refresh(true);
-                        this._oDepartmentDialog.close();
-                    },
-                    error: () => MessageToast.show(oBundle.getText("msgDepartmentUpdateError"))
-                });
+                oModel.update(this._sEditDepartmentPath, oDepartment,
+                    this.crudCallbacks("msgDepartmentUpdated", "msgDepartmentUpdateError", fnAfterSave));
                 return;
             }
 
-            oModel.create("/Departments", oDepartment, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgDepartmentAdded"));
-                    oModel.refresh(true);
-                    this._oDepartmentDialog.close();
-                },
-                error: () => MessageToast.show(oBundle.getText("msgDepartmentAddError"))
-            });
+            oModel.create("/Departments", oDepartment,
+                this.crudCallbacks("msgDepartmentAdded", "msgDepartmentAddError", fnAfterSave));
         },
 
         onDeleteDepartment: function (oEvent) {
@@ -257,13 +239,9 @@ sap.ui.define([
                         return;
                     }
 
-                    oModel.remove(sPath, {
-                        success: () => {
-                            MessageToast.show(oBundle.getText("msgDepartmentDeleted"));
-                            oModel.refresh(true);
-                        },
-                        error: () => MessageToast.show(oBundle.getText("msgDepartmentDeleteError"))
-                    });
+                    oModel.remove(sPath,
+                        this.crudCallbacks("msgDepartmentDeleted", "msgDepartmentDeleteError",
+                            () => oModel.refresh(true)));
                 }
             });
         },
@@ -315,17 +293,10 @@ sap.ui.define([
             oTarget.setValueState("None");
 
             try {
-                
-                // acelasi tipar ca la onSeedData din View.controller.js
-                const oRes = await fetch("/odata/v4/catalog/reassignDepartment", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ fromID: this._sReassignFromId, toID: sToId })
+                await this.callAction("reassignDepartment", {
+                    fromID: this._sReassignFromId,
+                    toID: sToId
                 });
-
-                if (!oRes.ok) {
-                    throw new Error(await oRes.text());
-                }
 
                 MessageToast.show(oBundle.getText("msgDepartmentReassigned"));
                 this.getODataModel().refresh(true);
@@ -382,16 +353,10 @@ sap.ui.define([
             oTarget.setValueState("None");
 
             try {
-                // acelasi tipar ca la reassignDepartment
-                const oRes = await fetch("/odata/v4/catalog/mergeSkills", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ fromID: this._sMergeFromId, toID: sToId })
+                await this.callAction("mergeSkills", {
+                    fromID: this._sMergeFromId,
+                    toID: sToId
                 });
-
-                if (!oRes.ok) {
-                    throw new Error(await oRes.text());
-                }
 
                 MessageToast.show(oBundle.getText("msgSkillsMerged"));
                 this.getODataModel().refresh(true);

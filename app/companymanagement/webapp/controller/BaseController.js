@@ -34,6 +34,49 @@ sap.ui.define([
             return this.getOwnerComponent().getModel();
         },
 
+        // Actiunile CAP se cheama prin POST, functiile prin GET cu ().
+        async callAction(sName, oPayload) {
+            const oRes = await fetch("/odata/v4/catalog/" + sName, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(oPayload || {})
+            });
+
+            if (!oRes.ok) {
+                throw new Error((await oRes.text()).slice(0, 300));
+            }
+
+            return oRes.json();
+        },
+
+        async callFunction(sName) {
+            const oRes = await fetch("/odata/v4/catalog/" + sName + "()");
+
+            if (!oRes.ok) {
+                throw new Error((await oRes.text()).slice(0, 300));
+            }
+
+            return oRes.json();
+        },
+
+        // Cele doua callback-uri pe care le cere modelul V2 la create/update/remove.
+        crudCallbacks(sOkKey, sErrorKey, fnAfterSuccess) {
+            const oBundle = this.getResourceBundle();
+
+            return {
+                success: () => {
+                    MessageToast.show(oBundle.getText(sOkKey));
+                    if (fnAfterSuccess) {
+                        fnAfterSuccess();
+                    }
+                },
+                error: (oError) => {
+                    console.error(sErrorKey, oError);
+                    MessageToast.show(oBundle.getText(sErrorKey));
+                }
+            };
+        },
+
 
         async openEmployeeForm(sMode, oEmployee) {
             const oBundle = this.getResourceBundle();

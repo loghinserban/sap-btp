@@ -134,20 +134,6 @@
                                 </layoutData>
                             </Button>
                             <Button
-                                id="btnCreateDepartment"
-                                text="{i18n>createDepartment}"
-                                type="Transparent"
-                                icon="sap-icon://add-folder"
-                                press=".onOpenDepartmentDialog"
-                            >
-                                <layoutData>
-                                    <OverflowToolbarLayoutData
-                                        id="btnCreateDepartmentLayout"
-                                        priority="Low"
-                                    />
-                                </layoutData>
-                            </Button>
-                            <Button
                                 id="btnAddEmployee"
                                 text="{i18n>addEmployee}"
                                 type="Emphasized"

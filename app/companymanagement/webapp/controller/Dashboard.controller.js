@@ -68,13 +68,7 @@ sap.ui.define([
             oPage.setBusy(true);
 
             try {
-                const oRes = await fetch("/odata/v4/catalog/getDashboard()");
-
-                if (!oRes.ok) {
-                    throw new Error(await oRes.text());
-                }
-
-                const oData = await oRes.json();
+                const oData = await this.callFunction("getDashboard");
 
                 this.getView().getModel("dash").setData({
                     kpis: oData.kpis || EMPTY_DASHBOARD.kpis,
