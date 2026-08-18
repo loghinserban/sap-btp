@@ -155,5 +155,9 @@
       "id": "App",
       "async": true
     }
+  },
+   "sap.cloud": {
+    "public": true,
+    "service": "project_approuter"
   }
 }

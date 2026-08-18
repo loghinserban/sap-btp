@@ -16,7 +16,6 @@ modules:
       srv-url: ${default-url}
   parameters:
     buildpack: nodejs_buildpack
-    host: ${space}-project-app-api
     instances: 1
   build-parameters:
     builder: npm-ci
@@ -35,6 +34,7 @@ modules:
     parameters:
       service-key:
         name: project_html_repo_host-key
+  - name: srv-api
   - name: uaa_project
     parameters:
       service-key:
@@ -116,15 +116,17 @@ resources:
             HTML5.DynamicDestination: true
             HTML5.ForwardAuthToken: true
             HTML5.Timeout: 600000
-            Name: project-app-api
+            Name: srv-api
             ProxyType: Internet
             Type: HTTP
-            URL: https://${space}-project-app-api.${default-domain}
+            URL: https://${space}-srv-api.${default-domain}
           existing_destinations_policy: update
       version: 1.0.0
     service: destination
     service-name: project-destination-service
     service-plan: lite
+  requires:
+    - name: srv-api
 - name: project_html_repo_host
   type: org.cloudfoundry.managed-service
   parameters:
