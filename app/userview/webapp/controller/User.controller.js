@@ -156,7 +156,8 @@ sap.ui.define([
                 return sId;
             }
 
-            return localStorage.getItem("currentEmployeeId") || DEFAULT_EMPLOYEE_ID;
+            //return localStorage.getItem("currentEmployeeId") || DEFAULT_EMPLOYEE_ID;
+            return DEFAULT_EMPLOYEE_ID;
         },
 
         onUserSearch: function (oEvent) {
