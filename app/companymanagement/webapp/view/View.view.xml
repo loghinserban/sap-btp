@@ -59,6 +59,21 @@
                             <ToolbarSpacer id="employeeTableToolbarSpacer" />
 
                             <Button
+                                id="btnDashboard"
+                                text="{i18n>dashboardTitle}"
+                                type="Transparent"
+                                icon="sap-icon://business-objects-experience"
+                                press=".onNavToDashboard"
+                            >
+                                <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnDashboardLayout"
+                                        priority="Low"
+                                    />
+                                </layoutData>
+                            </Button>
+
+                            <Button
                                 id="btnMasterData"
                                 text="{i18n>masterDataTitle}"
                                 type="Transparent"

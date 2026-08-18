@@ -2,6 +2,11 @@ const cds = require('@sap/cds');
 const { extractCvProfile } = require('./cv-extract');
 const { extractCvSkills } = require('./cv-skills');
 
+const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
+const AGING_MONTHS = 24;
+const TOP_SKILLS_SHOWN = 6;
+const RISKS_SHOWN = 8;
+
 function randomInt(max) {
   return Math.floor(Math.random() * max);
 }
@@ -68,8 +73,156 @@ function findRowBySkill(rows, skillID) {
   return null;
 }
 
+function findByID(rows, id) {
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].ID === id) {
+      return rows[i];
+    }
+  }
+  return null;
+}
+
+function asList(rows) {
+  if (!rows) {
+    return [];
+  }
+  if (Array.isArray(rows)) {
+    return rows;
+  }
+  return [rows];
+}
+
+function countFor(rows, field, id) {
+  let total = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][field] === id) {
+      total++;
+    }
+  }
+  return total;
+}
+
+function monthsSince(value) {
+  if (!value) {
+    return null;
+  }
+  const then = new Date(value);
+  if (isNaN(then.getTime())) {
+    return null;
+  }
+  const months = Math.floor((Date.now() - then.getTime()) / MS_PER_MONTH);
+  if (months < 0) {
+    return 0;
+  }
+  return months;
+}
+
+function percent(value, total) {
+  if (!total) {
+    return 0;
+  }
+  return Math.round((value * 100) / total);
+}
+
+function average(sum, count) {
+  if (!count) {
+    return 0;
+  }
+  return Math.round((sum / count) * 10) / 10;
+}
+
+function byEmployeesDesc(a, b) {
+  return b.employees - a.employees;
+}
+
+function bySeverityDesc(a, b) {
+  if (b.weight !== a.weight) {
+    return b.weight - a.weight;
+  }
+  return b.months - a.months;
+}
+
 module.exports = (srv) => {
-  const { Employees, EmployeeSkills, Departments, Skills } = srv.entities;
+  const { Employees, EmployeeSkills, Departments, Skills, Reviews } = srv.entities;
+
+  srv.after('READ', 'Skills', async (rows) => {
+    const list = asList(rows);
+    if (list.length === 0) {
+      return;
+    }
+
+    const used = await SELECT.from(EmployeeSkills).columns('skill_ID');
+
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && list[i].ID) {
+        list[i].usageCount = countFor(used, 'skill_ID', list[i].ID);
+      }
+    }
+  });
+
+  srv.after('READ', 'Departments', async (rows) => {
+    const list = asList(rows);
+    if (list.length === 0) {
+      return;
+    }
+
+    const used = await SELECT.from(Employees).columns('department_ID');
+
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && list[i].ID) {
+        list[i].usageCount = countFor(used, 'department_ID', list[i].ID);
+      }
+    }
+  });
+
+  srv.before('CREATE', 'Skills', async (req) => {
+    await rejectDuplicateName(req, Skills, 'skill');
+  });
+
+  srv.before('UPDATE', 'Skills', async (req) => {
+    await rejectDuplicateName(req, Skills, 'skill');
+  });
+
+  srv.before('CREATE', 'Departments', async (req) => {
+    await rejectDuplicateName(req, Departments, 'department');
+  });
+
+  srv.before('UPDATE', 'Departments', async (req) => {
+    await rejectDuplicateName(req, Departments, 'department');
+  });
+
+  async function rejectDuplicateName(req, entity, label) {
+    const name = req.data.name;
+    if (!name) {
+      return;
+    }
+
+    const ownID = keyOf(req);
+    const existing = await SELECT.from(entity).columns('ID', 'name');
+    const wanted = name.trim().toLowerCase();
+
+    for (let i = 0; i < existing.length; i++) {
+      const current = (existing[i].name || '').trim().toLowerCase();
+      if (current === wanted && existing[i].ID !== ownID) {
+        return req.reject(400, 'A ' + label + ' called "' + existing[i].name + '" already exists.');
+      }
+    }
+  }
+
+  function keyOf(req) {
+    if (req.data && req.data.ID) {
+      return req.data.ID;
+    }
+    if (!req.params || req.params.length === 0) {
+      return null;
+    }
+
+    const last = req.params[req.params.length - 1];
+    if (last && last.ID) {
+      return last.ID;
+    }
+    return last;
+  }
 
   srv.on('seedDemoData', async (req) => {
     let count = req.data.count;
@@ -158,6 +311,262 @@ module.exports = (srv) => {
     await DELETE.from(Departments).where({ ID: fromID });
 
     return 'Employees moved successfully and department deleted';
+  });
+
+  srv.on('mergeSkills', async (req) => {
+    const fromID = req.data.fromID;
+    const toID = req.data.toID;
+
+    if (!fromID || !toID || fromID === toID) {
+      return req.reject(400, 'Choose two different skills.');
+    }
+
+    const source = await SELECT.one.from(Skills).columns('ID', 'name').where({ ID: fromID });
+    const target = await SELECT.one.from(Skills).columns('ID', 'name').where({ ID: toID });
+
+    if (!source || !target) {
+      return req.reject(404, 'Skill not found.');
+    }
+
+    const sourceRows = await SELECT.from(EmployeeSkills).where({ skill_ID: fromID });
+    const targetRows = await SELECT.from(EmployeeSkills).where({ skill_ID: toID });
+
+    let moved = 0;
+    let merged = 0;
+
+    for (let i = 0; i < sourceRows.length; i++) {
+      const row = sourceRows[i];
+      let twin = null;
+
+      for (let j = 0; j < targetRows.length; j++) {
+        if (targetRows[j].employee_ID === row.employee_ID) {
+          twin = targetRows[j];
+        }
+      }
+
+      if (!twin) {
+        await UPDATE(EmployeeSkills).set({ skill_ID: toID }).where({ ID: row.ID });
+        moved++;
+        continue;
+      }
+
+      let rating = twin.rating;
+      if (row.rating > rating) {
+        rating = row.rating;
+      }
+
+      let lastUsed = twin.lastUsed;
+      if (row.lastUsed && (!lastUsed || row.lastUsed > lastUsed)) {
+        lastUsed = row.lastUsed;
+      }
+
+      await UPDATE(EmployeeSkills).set({ rating: rating, lastUsed: lastUsed }).where({ ID: twin.ID });
+      await DELETE.from(EmployeeSkills).where({ ID: row.ID });
+      merged++;
+    }
+
+    await DELETE.from(Skills).where({ ID: fromID });
+
+    return source.name + ' merged into ' + target.name + '. ' + moved + ' moved, ' + merged + ' already existed.';
+  });
+
+  srv.on('getDashboard', async () => {
+    const employees = await SELECT.from(Employees).columns('ID', 'firstName', 'lastName', 'experience', 'department_ID');
+    const departments = await SELECT.from(Departments).columns('ID', 'name');
+    const skills = await SELECT.from(Skills).columns('ID', 'name');
+    const assignments = await SELECT.from(EmployeeSkills).columns('employee_ID', 'skill_ID', 'rating', 'lastUsed');
+    const reviews = await SELECT.from(Reviews).columns('stars');
+
+    const skillStats = [];
+    for (let i = 0; i < skills.length; i++) {
+      skillStats.push({
+        ID: skills[i].ID,
+        name: skills[i].name,
+        employees: 0,
+        ratingSum: 0,
+        newestMonths: null,
+        onlyExpertID: null
+      });
+    }
+
+    const departmentStats = [];
+    for (let i = 0; i < departments.length; i++) {
+      departmentStats.push({
+        ID: departments[i].ID,
+        name: departments[i].name,
+        employees: 0,
+        experienceSum: 0,
+        skillIDs: []
+      });
+    }
+
+    const employeesWithSkills = [];
+    let ratingSum = 0;
+
+    for (let i = 0; i < assignments.length; i++) {
+      const row = assignments[i];
+      const stat = findByID(skillStats, row.skill_ID);
+      const months = monthsSince(row.lastUsed);
+
+      if (stat) {
+        stat.employees++;
+        stat.ratingSum = stat.ratingSum + (row.rating || 0);
+        stat.onlyExpertID = row.employee_ID;
+
+        if (months !== null && (stat.newestMonths === null || months < stat.newestMonths)) {
+          stat.newestMonths = months;
+        }
+      }
+
+      ratingSum = ratingSum + (row.rating || 0);
+
+      if (employeesWithSkills.indexOf(row.employee_ID) === -1) {
+        employeesWithSkills.push(row.employee_ID);
+      }
+
+      const employee = findByID(employees, row.employee_ID);
+      if (employee) {
+        const department = findByID(departmentStats, employee.department_ID);
+        if (department && department.skillIDs.indexOf(row.skill_ID) === -1) {
+          department.skillIDs.push(row.skill_ID);
+        }
+      }
+    }
+
+    for (let i = 0; i < employees.length; i++) {
+      const department = findByID(departmentStats, employees[i].department_ID);
+      if (department) {
+        department.employees++;
+        department.experienceSum = department.experienceSum + (employees[i].experience || 0);
+      }
+    }
+
+    let unusedSkills = 0;
+    let singleExpertSkills = 0;
+
+    for (let i = 0; i < skillStats.length; i++) {
+      if (skillStats[i].employees === 0) {
+        unusedSkills++;
+      }
+      if (skillStats[i].employees === 1) {
+        singleExpertSkills++;
+      }
+    }
+
+    let starsSum = 0;
+    for (let i = 0; i < reviews.length; i++) {
+      starsSum = starsSum + (reviews[i].stars || 0);
+    }
+
+    const kpis = {
+      employees: employees.length,
+      departments: departments.length,
+      skills: skills.length,
+      assignments: assignments.length,
+      avgSkillsPerEmployee: average(assignments.length, employees.length),
+      avgRating: average(ratingSum, assignments.length),
+      employeesWithoutSkills: employees.length - employeesWithSkills.length,
+      unusedSkills: unusedSkills,
+      singleExpertSkills: singleExpertSkills
+    };
+
+    const ranked = skillStats.slice();
+    ranked.sort(byEmployeesDesc);
+
+    const topSkills = [];
+    for (let i = 0; i < ranked.length && i < TOP_SKILLS_SHOWN; i++) {
+      topSkills.push({
+        ID: ranked[i].ID,
+        name: ranked[i].name,
+        employees: ranked[i].employees,
+        share: percent(ranked[i].employees, employees.length),
+        avgRating: average(ranked[i].ratingSum, ranked[i].employees)
+      });
+    }
+
+    const departmentLoad = [];
+    for (let i = 0; i < departmentStats.length; i++) {
+      departmentLoad.push({
+        ID: departmentStats[i].ID,
+        name: departmentStats[i].name,
+        employees: departmentStats[i].employees,
+        share: percent(departmentStats[i].employees, employees.length),
+        skills: departmentStats[i].skillIDs.length,
+        avgExperience: average(departmentStats[i].experienceSum, departmentStats[i].employees)
+      });
+    }
+    departmentLoad.sort(byEmployeesDesc);
+
+    const risks = [];
+    for (let i = 0; i < skillStats.length; i++) {
+      const stat = skillStats[i];
+      const months = stat.newestMonths;
+
+      let reason = null;
+      let weight = 0;
+
+      if (stat.employees === 0) {
+        reason = 'Nobody has this skill';
+        weight = 2;
+      } else if (stat.employees === 1 && (months === null || months > AGING_MONTHS)) {
+        reason = 'Only one expert, and out of practice';
+        weight = 4;
+      } else if (stat.employees === 1) {
+        reason = 'Only one expert';
+        weight = 3;
+      } else if (months === null || months > AGING_MONTHS) {
+        reason = 'Nobody used it recently';
+        weight = 1;
+      }
+
+      if (!reason) {
+        continue;
+      }
+
+      let expert = '';
+      if (stat.employees === 1) {
+        const person = findByID(employees, stat.onlyExpertID);
+        if (person) {
+          expert = person.firstName + ' ' + person.lastName;
+        }
+      }
+
+      let shownMonths = months;
+      if (shownMonths === null) {
+        shownMonths = 0;
+      }
+
+      risks.push({
+        ID: stat.ID,
+        name: stat.name,
+        employees: stat.employees,
+        expert: expert,
+        months: shownMonths,
+        reason: reason,
+        weight: weight
+      });
+    }
+
+    risks.sort(bySeverityDesc);
+
+    const shownRisks = [];
+    for (let i = 0; i < risks.length && i < RISKS_SHOWN; i++) {
+      shownRisks.push({
+        ID: risks[i].ID,
+        name: risks[i].name,
+        employees: risks[i].employees,
+        expert: risks[i].expert,
+        months: risks[i].months,
+        reason: risks[i].reason
+      });
+    }
+
+    return {
+      kpis: kpis,
+      topSkills: topSkills,
+      departments: departmentLoad,
+      risks: shownRisks
+    };
   });
 
   srv.on('extractCv', async (req) => {

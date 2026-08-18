@@ -1,0 +1,321 @@
+<mvc:View
+    controllerName="companymanagement.controller.Dashboard"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds"
+    xmlns:viz.data="sap.viz.ui5.data"
+>
+    <Page
+        id="dashboardPage"
+        title="{i18n>dashboardTitle}"
+        showNavButton="true"
+        navButtonPress=".onNavBack"
+        class="sapUiResponsiveContentPadding"
+    >
+        <headerContent>
+            <Button
+                id="btnRefreshDashboard"
+                icon="sap-icon://refresh"
+                type="Transparent"
+                tooltip="{i18n>refresh}"
+                press=".onRefresh"
+            />
+        </headerContent>
+
+        <content>
+            <VBox id="dashboardContent">
+
+                <HBox
+                    id="dashboardTiles"
+                    wrap="Wrap"
+                >
+                    <GenericTile
+                        id="tileEmployees"
+                        header="{i18n>dashEmployees}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcEmployees" unit="{i18n>dashUnitPeople}">
+                            <NumericContent
+                                id="ncEmployees"
+                                value="{dash>/kpis/employees}"
+                                icon="sap-icon://employee"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+
+                    <GenericTile
+                        id="tileDepartments"
+                        header="{i18n>dashDepartments}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcDepartments" unit="{i18n>dashUnitDepartments}">
+                            <NumericContent
+                                id="ncDepartments"
+                                value="{dash>/kpis/departments}"
+                                icon="sap-icon://org-chart"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+
+                    <GenericTile
+                        id="tileSkills"
+                        header="{i18n>dashSkills}"
+                        subheader="{i18n>dashSkillsSub}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcSkills" unit="{i18n>dashUnitSkills}">
+                            <NumericContent
+                                id="ncSkills"
+                                value="{dash>/kpis/skills}"
+                                icon="sap-icon://competitor"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+
+                    <GenericTile
+                        id="tileAvgSkills"
+                        header="{i18n>dashAvgSkills}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcAvgSkills" unit="{i18n>dashUnitPerEmployee}">
+                            <NumericContent
+                                id="ncAvgSkills"
+                                value="{dash>/kpis/avgSkillsPerEmployee}"
+                                icon="sap-icon://chart-axis"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+
+                    <GenericTile
+                        id="tileNoSkills"
+                        header="{i18n>dashNoSkills}"
+                        subheader="{i18n>dashNoSkillsSub}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcNoSkills" unit="{i18n>dashUnitPeople}">
+                            <NumericContent
+                                id="ncNoSkills"
+                                value="{dash>/kpis/employeesWithoutSkills}"
+                                icon="sap-icon://person-placeholder"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+
+                    <GenericTile
+                        id="tileUnusedSkills"
+                        header="{i18n>dashUnusedSkills}"
+                        subheader="{i18n>dashUnusedSkillsSub}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcUnusedSkills" unit="{i18n>dashUnitSkills}">
+                            <NumericContent
+                                id="ncUnusedSkills"
+                                value="{dash>/kpis/unusedSkills}"
+                                icon="sap-icon://delete"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+
+                    <GenericTile
+                        id="tileSingleExpert"
+                        header="{i18n>dashSingleExpert}"
+                        subheader="{i18n>dashSingleExpertSub}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcSingleExpert" unit="{i18n>dashUnitSkills}">
+                            <NumericContent
+                                id="ncSingleExpert"
+                                value="{dash>/kpis/singleExpertSkills}"
+                                icon="sap-icon://warning"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+
+                    <GenericTile
+                        id="tileAvgRating"
+                        header="{i18n>dashAvgRating}"
+                        class="sapUiTinyMargin"
+                    >
+                        <TileContent id="tcAvgRating" unit="{i18n>dashUnitOutOfFive}">
+                            <NumericContent
+                                id="ncAvgRating"
+                                value="{dash>/kpis/avgRating}"
+                                icon="sap-icon://favorite"
+                                withMargin="false"
+                            />
+                        </TileContent>
+                    </GenericTile>
+                </HBox>
+
+                <l:Grid
+                    id="dashboardGrid"
+                    defaultSpan="XL6 L6 M12 S12"
+                    class="sapUiSmallMarginTop"
+                >
+                    <Panel
+                        id="panelTopSkills"
+                        headerText="{i18n>dashTopSkills}"
+                    >
+                        <viz:VizFrame
+                            id="skillsDonut"
+                            uiConfig="{applicationSet:'fiori'}"
+                            vizType="donut"
+                            height="20rem"
+                            width="100%"
+                        >
+                            <viz:dataset>
+                                <viz.data:FlattenedDataset data="{dash>/topSkills}">
+                                    <viz.data:dimensions>
+                                        <viz.data:DimensionDefinition
+                                            name="Skill"
+                                            value="{dash>name}"
+                                        />
+                                    </viz.data:dimensions>
+                                    <viz.data:measures>
+                                        <viz.data:MeasureDefinition
+                                            name="Employees"
+                                            value="{dash>employees}"
+                                        />
+                                    </viz.data:measures>
+                                </viz.data:FlattenedDataset>
+                            </viz:dataset>
+
+                            <viz:feeds>
+                                <viz.feeds:FeedItem
+                                    uid="size"
+                                    type="Measure"
+                                    values="Employees"
+                                />
+                                <viz.feeds:FeedItem
+                                    uid="color"
+                                    type="Dimension"
+                                    values="Skill"
+                                />
+                            </viz:feeds>
+
+                            <viz:dependents>
+                                <viz:Popover id="skillsDonutPopover" />
+                            </viz:dependents>
+                        </viz:VizFrame>
+                    </Panel>
+
+                    <Panel
+                        id="panelDepartments"
+                        headerText="{i18n>dashDepartmentBalance}"
+                    >
+                        <viz:VizFrame
+                            id="departmentsDonut"
+                            uiConfig="{applicationSet:'fiori'}"
+                            vizType="donut"
+                            height="20rem"
+                            width="100%"
+                        >
+                            <viz:dataset>
+                                <viz.data:FlattenedDataset data="{dash>/departments}">
+                                    <viz.data:dimensions>
+                                        <viz.data:DimensionDefinition
+                                            name="Department"
+                                            value="{dash>name}"
+                                        />
+                                    </viz.data:dimensions>
+                                    <viz.data:measures>
+                                        <viz.data:MeasureDefinition
+                                            name="Employees"
+                                            value="{dash>employees}"
+                                        />
+                                    </viz.data:measures>
+                                </viz.data:FlattenedDataset>
+                            </viz:dataset>
+
+                            <viz:feeds>
+                                <viz.feeds:FeedItem
+                                    uid="size"
+                                    type="Measure"
+                                    values="Employees"
+                                />
+                                <viz.feeds:FeedItem
+                                    uid="color"
+                                    type="Dimension"
+                                    values="Department"
+                                />
+                            </viz:feeds>
+
+                            <viz:dependents>
+                                <viz:Popover id="departmentsDonutPopover" />
+                            </viz:dependents>
+                        </viz:VizFrame>
+                    </Panel>
+                </l:Grid>
+
+                <Panel
+                    id="panelRisks"
+                    headerText="{i18n>dashRisks}"
+                    class="sapUiSmallMarginTop"
+                >
+                    <Table
+                        id="risksTable"
+                        items="{dash>/risks}"
+                    >
+                        <columns>
+                            <Column id="colRiskSkill">
+                                <Text id="txtColRiskSkill" text="{i18n>skillName}" />
+                            </Column>
+                            <Column id="colRiskReason">
+                                <Text id="txtColRiskReason" text="{i18n>dashRiskReason}" />
+                            </Column>
+                            <Column id="colRiskExpert" minScreenWidth="Tablet" demandPopin="true">
+                                <Text id="txtColRiskExpert" text="{i18n>dashRiskExpert}" />
+                            </Column>
+                            <Column id="colRiskLastUsed" hAlign="End" minScreenWidth="Tablet" demandPopin="true">
+                                <Text id="txtColRiskLastUsed" text="{i18n>lastUsed}" />
+                            </Column>
+                        </columns>
+
+                        <items>
+                            <ColumnListItem id="riskRow">
+                                <cells>
+                                    <ObjectIdentifier
+                                        id="riskSkillName"
+                                        title="{dash>name}"
+                                        text="{parts: ['dash>employees'], formatter: '.formatExperts'}"
+                                    />
+                                    <Text
+                                        id="riskReason"
+                                        text="{dash>reason}"
+                                    />
+                                    <Text
+                                        id="riskExpert"
+                                        text="{dash>expert}"
+                                    />
+                                    <Text
+                                        id="riskLastUsed"
+                                        text="{parts: ['dash>months', 'dash>employees'], formatter: '.formatMonths'}"
+                                    />
+                                </cells>
+                            </ColumnListItem>
+                        </items>
+
+                        <noData>
+                            <IllustratedMessage
+                                id="risksNoData"
+                                illustrationType="sapIllus-SuccessScreen"
+                                title="{i18n>dashNoRisks}"
+                                illustrationSize="Spot"
+                            />
+                        </noData>
+                    </Table>
+                </Panel>
+
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

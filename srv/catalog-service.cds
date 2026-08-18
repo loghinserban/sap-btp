@@ -11,8 +11,21 @@ service CatalogService {
 
     action   seedDemoData(count: Integer)                                       returns String;
     action   reassignDepartment(fromID: UUID, toID: UUID)                       returns String; // daca as muta 30 de angajati din UI as face 30 de request uri.
-    entity Skills         as projection on db.Skills;
-    entity Departments    as projection on db.Departments;
+    action   mergeSkills(fromID: UUID, toID: UUID)                              returns String;
+
+    // usageCount nu e in baza de date, se calculeaza in after READ.
+    entity Skills         as
+        projection on db.Skills {
+            *,
+            virtual null as usageCount : Integer
+        };
+
+    entity Departments    as
+        projection on db.Departments {
+            *,
+            virtual null as usageCount : Integer
+        };
+
     entity Reviews        as projection on db.Reviews;
 
     entity Employees      as
@@ -71,6 +84,55 @@ service CatalogService {
         worstFreshness : String(100);
         matchedSkills  : array of SkillHit;
     };
+
+    //dashboard
+
+    type DashboardKpis       : {
+        employees              : Integer;
+        departments            : Integer;
+        skills                 : Integer;
+        assignments            : Integer;
+        avgSkillsPerEmployee   : Double;
+        avgRating              : Double;
+        employeesWithoutSkills : Integer;
+        unusedSkills           : Integer;
+        singleExpertSkills     : Integer;
+    };
+
+    type DashboardSkill      : {
+        ID        : String(36);
+        name      : String(100);
+        employees : Integer;
+        share     : Integer;
+        avgRating : Double;
+    };
+
+    type DashboardDepartment : {
+        ID            : String(36);
+        name          : String(100);
+        employees     : Integer;
+        share         : Integer;
+        skills        : Integer;
+        avgExperience : Double;
+    };
+
+    type DashboardRisk       : {
+        ID        : String(36);
+        name      : String(100);
+        employees : Integer;
+        expert    : String(100);
+        months    : Integer;
+        reason    : String(100);
+    };
+
+    type DashboardData       : {
+        kpis        : DashboardKpis;
+        topSkills   : array of DashboardSkill;
+        departments : array of DashboardDepartment;
+        risks       : array of DashboardRisk;
+    };
+
+    function getDashboard()                                                     returns DashboardData;
 
     function searchEmployees(skillIds: String(100),
                              minRating: Integer,

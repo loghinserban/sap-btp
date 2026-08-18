@@ -79,7 +79,8 @@
         "sap.ui.comp": {},
         "sap.ui.layout": {},
         "sap.ui.unified":{},
-        "sap.uxap": {}
+        "sap.uxap": {},
+        "sap.viz": {}
       }
     },
     "contentDensities": {
@@ -147,6 +148,13 @@
           "target" : [
             "TargetAdmin"
           ]
+        },
+        {
+          "name" : "RouteDashboard",
+          "pattern" : "dashboard",
+          "target" : [
+            "TargetDashboard"
+          ]
         }
       ],
       "targets": {
@@ -165,6 +173,10 @@
         "TargetAdmin" : {
           "id" : "Admin",
           "name" : "Admin"
+        },
+        "TargetDashboard" : {
+          "id" : "Dashboard",
+          "name" : "Dashboard"
         }
       }
     },

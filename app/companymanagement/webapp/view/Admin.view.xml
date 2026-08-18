@@ -33,6 +33,13 @@
                                         text="{i18n>skillsTab}"
                                     />
                                     <ToolbarSpacer id="skillsMasterSpacer" />
+                                    <SearchField
+                                        id="skillsSearchField"
+                                        width="15rem"
+                                        placeholder="{i18n>searchByName}"
+                                        search=".onSearchSkills"
+                                        liveChange=".onSearchSkills"
+                                    />
                                     <Button
                                         id="btnAddSkillMaster"
                                         text="{i18n>createSkill}"
@@ -61,6 +68,18 @@
                                     />
                                 </Column>
                                 <Column
+                                    id="colSkillMasterUsage"
+                                    hAlign="End"
+                                    width="9rem"
+                                    minScreenWidth="Tablet"
+                                    demandPopin="true"
+                                >
+                                    <Text
+                                        id="txtColSkillMasterUsage"
+                                        text="{i18n>usageColumn}"
+                                    />
+                                </Column>
+                                <Column
                                     id="colSkillMasterActions"
                                     hAlign="End"
                                 >
@@ -82,10 +101,23 @@
                                             id="skillMasterDesc"
                                             text="{description}"
                                         />
+                                        <ObjectNumber
+                                            id="skillMasterUsage"
+                                            number="{usageCount}"
+                                            unit="{i18n>usageUnitEmployees}"
+                                            state="{path: 'usageCount', formatter: '.formatUsageState'}"
+                                        />
                                         <HBox
                                             id="skillMasterActions"
                                             justifyContent="End"
                                         >
+                                            <Button
+                                                id="btnMergeSkillMaster"
+                                                icon="sap-icon://combine"
+                                                type="Transparent"
+                                                tooltip="{i18n>mergeSkill}"
+                                                press=".onMergeSkill"
+                                            />
                                             <Button
                                                 id="btnEditSkillMaster"
                                                 icon="sap-icon://edit"
@@ -134,6 +166,13 @@
                                     <ToolbarSpacer
                                         id="departmentsMasterSpacer"
                                     />
+                                    <SearchField
+                                        id="departmentsSearchField"
+                                        width="15rem"
+                                        placeholder="{i18n>searchByName}"
+                                        search=".onSearchDepartments"
+                                        liveChange=".onSearchDepartments"
+                                    />
                                     <Button
                                         id="btnAddDepartmentMaster"
                                         text="{i18n>createDepartment}"
@@ -162,6 +201,18 @@
                                     />
                                 </Column>
                                 <Column
+                                    id="colDeptMasterUsage"
+                                    hAlign="End"
+                                    width="9rem"
+                                    minScreenWidth="Tablet"
+                                    demandPopin="true"
+                                >
+                                    <Text
+                                        id="txtColDeptMasterUsage"
+                                        text="{i18n>usageColumn}"
+                                    />
+                                </Column>
+                                <Column
                                     id="colDeptMasterActions"
                                     hAlign="End"
                                 >
@@ -182,6 +233,12 @@
                                         <Text
                                             id="deptMasterDesc"
                                             text="{description}"
+                                        />
+                                        <ObjectNumber
+                                            id="deptMasterUsage"
+                                            number="{usageCount}"
+                                            unit="{i18n>usageUnitEmployees}"
+                                            state="{path: 'usageCount', formatter: '.formatUsageState'}"
                                         />
                                         <HBox
                                             id="deptMasterActions"

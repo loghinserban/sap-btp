@@ -1,0 +1,57 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+>
+    <Dialog
+        id="mergeSkillDialog"
+        title="{i18n>mergeSkillTitle}"
+        contentWidth="30rem"
+        draggable="true"
+    >
+        <content>
+            <VBox id="mergeSkillBox" class="sapUiMediumMargin">
+                <Text id="mergeSkillInfo" text="{merge>/message}" />
+
+                <Label
+                    id="lblMergeSkillTarget"
+                    text="{i18n>mergeSkillTarget}"
+                    required="true"
+                    class="sapUiSmallMarginTop"
+                />
+                <ComboBox
+                    id="mergeSkillTarget"
+                    width="100%"
+                    items="{/Skills}"
+                    placeholder="{i18n>selectSkill}"
+                >
+                    <core:Item key="{ID}" text="{name}" />
+                </ComboBox>
+
+                <MessageStrip
+                    id="mergeSkillHint"
+                    text="{i18n>mergeSkillHint}"
+                    type="Warning"
+                    showIcon="true"
+                    class="sapUiSmallMarginTop"
+                />
+            </VBox>
+        </content>
+
+        <beginButton>
+            <Button
+                id="btnConfirmMergeSkill"
+                text="{i18n>mergeSkillConfirm}"
+                type="Emphasized"
+                press=".onConfirmMergeSkill"
+            />
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCancelMergeSkill"
+                text="{i18n>cancel}"
+                type="Transparent"
+                press=".onCloseMergeSkillDialog"
+            />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>
