@@ -3,10 +3,16 @@
   "authenticationMethod": "route",
   "routes": [
     {
+      "source": "^/odata/(.*)",
+      "destination": "srv-api",
       "authenticationType": "xsuaa",
-      "csrfProtection": false,
-      "source": "/catalog/(.*)",
-      "destination": "srv-api"
+      "csrfProtection": true
+    },
+    {
+      "source": "^/v2/(.*)",
+      "destination": "srv-api",
+      "authenticationType": "xsuaa",
+      "csrfProtection": true
     },
     {
       "source": "^/resources/(.*)$",
