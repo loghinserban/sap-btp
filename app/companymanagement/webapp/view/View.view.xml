@@ -59,6 +59,21 @@
                             <ToolbarSpacer id="employeeTableToolbarSpacer" />
 
                             <Button
+                                id="btnDashboard"
+                                text="{i18n>dashboardTitle}"
+                                type="Transparent"
+                                icon="sap-icon://business-objects-experience"
+                                press=".onNavToDashboard"
+                            >
+                                <layoutData>
+                                    <OverflowToolbarLayoutData
+                                        id="btnDashboardLayout"
+                                        priority="Low"
+                                    />
+                                </layoutData>
+                            </Button>
+
+                            <Button
                                 id="btnMasterData"
                                 text="{i18n>masterDataTitle}"
                                 type="Transparent"
@@ -114,20 +129,6 @@
                                 <layoutData>
                                     <OverflowToolbarLayoutData
                                         id="btnGoToSearchLayout"
-                                        priority="Low"
-                                    />
-                                </layoutData>
-                            </Button>
-                            <Button
-                                id="btnCreateDepartment"
-                                text="{i18n>createDepartment}"
-                                type="Transparent"
-                                icon="sap-icon://add-folder"
-                                press=".onOpenDepartmentDialog"
-                            >
-                                <layoutData>
-                                    <OverflowToolbarLayoutData
-                                        id="btnCreateDepartmentLayout"
                                         priority="Low"
                                     />
                                 </layoutData>

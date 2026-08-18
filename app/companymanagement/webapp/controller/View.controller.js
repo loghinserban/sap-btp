@@ -1,23 +1,16 @@
 sap.ui.define([
     "companymanagement/controller/BaseController",
-    "sap/ui/core/library",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
     "sap/m/MessageBox"
-], (BaseController, coreLibrary, Filter, FilterOperator, JSONModel, MessageToast, MessageBox) => {
+], (BaseController, Filter, FilterOperator, JSONModel, MessageToast, MessageBox) => {
     "use strict";
-
-    const ValueState = coreLibrary.ValueState;
 
     const BASIC_SEARCH_FIELDS = ["firstName", "lastName", "email"];
 
     return BaseController.extend("companymanagement.controller.View", {
-
-        onInit() {
-            this._oDepartmentDialog = null;
-        },
 
         //list report
         onBeforeRebindTable(oEvent) {
@@ -58,6 +51,10 @@ sap.ui.define([
             this.getRouter().navTo("RouteAdmin");
         },
 
+        onNavToDashboard() {
+            this.getRouter().navTo("RouteDashboard");
+        },
+
         //add employee
         onOpenAddEmployeeDialog() {
             return this.openEmployeeForm("add");
@@ -65,13 +62,7 @@ sap.ui.define([
 
         async onSeedData() {
             try {
-                const oRes = await fetch("/odata/v4/catalog/seedDemoData", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ count: 25 })
-                });
-                if (!oRes.ok) { throw new Error(await oRes.text()); }
-                const oData = await oRes.json();
+                const oData = await this.callAction("seedDemoData", { count: 25 });
                 MessageToast.show(oData.value);
                 this.byId("employeeSmartTable").rebindTable();
             } catch (e) {
@@ -90,66 +81,13 @@ sap.ui.define([
                 return;
             }
 
-            const oBundle = this.getResourceBundle();
-
-            this.getODataModel().create("/Employees", oPayload, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgEmployeeAdded"));
+            this.getODataModel().create("/Employees", oPayload,
+                this.crudCallbacks("msgEmployeeAdded", "msgEmployeeAddError", () => {
                     this.byId("employeeSmartTable")?.rebindTable();
                     this.closeEmployeeForm();
-                },
-                error: (oError) => {
-                    console.error("Create employee failed:", oError);
-                    MessageToast.show(oBundle.getText("msgEmployeeAddError"));
-                }
-            });
+                })
+            );
         },
-        //create department
-        async onOpenDepartmentDialog() {
-            this._oDepartmentDialog ??= await this.loadFragment({
-                name: "companymanagement.view.DepartmentDialog"
-            });
-            this._oDepartmentDialog.open();
-        },
-
-        onCloseDepartmentDialog() {
-            this._oDepartmentDialog?.close();
-        },
-
-        onAddDepartment() {
-            const oBundle = this.getResourceBundle();
-            const oNameInput = this.byId("departmentName");
-            const sName = oNameInput.getValue().trim();
-
-            if (!sName) {
-                oNameInput.setValueState(ValueState.Error);
-                MessageToast.show(oBundle.getText("msgFillRequiredFields"));
-                return;
-            }
-            oNameInput.setValueState(ValueState.None);
-
-            this.getODataModel().create("/Departments", {
-                name: sName,
-                description: this.byId("departmentDescription").getValue().trim()
-            }, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgDepartmentAdded"));
-                    this.onCloseDepartmentDialog();
-                },
-                error: (oError) => {
-                    console.error("Create department failed:", oError);
-                    MessageToast.show(oBundle.getText("msgDepartmentAddError"));
-                }
-            });
-        },
-
-        onDepartmentDialogClosed() {
-            const oNameInput = this.byId("departmentName");
-            oNameInput.setValue("");
-            oNameInput.setValueState(ValueState.None);
-            this.byId("departmentDescription").setValue("");
-        },
-
         async onOpenUploadCvDialog() {
             this._oCvDialog ??= await this.loadFragment({
                 name: "companymanagement.view.UploadCvDialog"
@@ -208,17 +146,10 @@ sap.ui.define([
             try {
                 const sBase64 = await this._readAsBase64(this._oCvFile);
 
-                const oRes = await fetch("/odata/v4/catalog/extractCv", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        fileName: this._oCvFile.name,
-                        contentBase64: sBase64
-                    })
+                const oProfile = await this.callAction("extractCv", {
+                    fileName: this._oCvFile.name,
+                    contentBase64: sBase64
                 });
-                if (!oRes.ok) { throw new Error((await oRes.text()).slice(0, 300)); }
-
-                const oProfile = await oRes.json();
 
                 oProfile.skills = (oProfile.skills || []).map((oSkill) => ({
                     ...oSkill,
@@ -275,23 +206,17 @@ sap.ui.define([
             oCvModel.setProperty("/busy", true);
 
             try {
-                const oRes = await fetch("/odata/v4/catalog/createEmployeeFromCv", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        profile: {
-                            firstName: oProfile.firstName,
-                            lastName: oProfile.lastName,
-                            email: oProfile.email,
-                            experience: Number(oProfile.experience) || 0,
-                            skills: aSkills
-                        },
-                        departmentID: oData.departmentID || null
-                    })
+                const oResult = await this.callAction("createEmployeeFromCv", {
+                    profile: {
+                        firstName: oProfile.firstName,
+                        lastName: oProfile.lastName,
+                        email: oProfile.email,
+                        experience: Number(oProfile.experience) || 0,
+                        skills: aSkills
+                    },
+                    departmentID: oData.departmentID || null
                 });
-                if (!oRes.ok) { throw new Error((await oRes.text()).slice(0, 300)); }
 
-                const oResult = await oRes.json();
                 MessageToast.show(oResult.value);
 
                 this.onCloseCvDialog();

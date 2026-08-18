@@ -83,19 +83,11 @@ sap.ui.define([
                 return;
             }
 
-            const oBundle = this.getResourceBundle();
             const sPath = this.getView().getBindingContext().getPath();
 
-            this.getODataModel().update(sPath, oPayload, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgEmployeeUpdated"));
-                    this.closeEmployeeForm();
-                },
-                error: (oError) => {
-                    console.error("Update employee failed:", oError);
-                    MessageToast.show(oBundle.getText("msgEmployeeUpdateError"));
-                }
-            });
+            this.getODataModel().update(sPath, oPayload,
+                this.crudCallbacks("msgEmployeeUpdated", "msgEmployeeUpdateError",
+                    () => this.closeEmployeeForm()));
         },
 
         //delete nav
@@ -111,16 +103,9 @@ sap.ui.define([
                         return;
                     }
 
-                    oModel.remove(sPath, {
-                        success: () => {
-                            MessageToast.show(oBundle.getText("msgEmployeeDeleted"));
-                            this.onNavBack();
-                        },
-                        error: (oError) => {
-                            console.error("Delete employee failed:", oError);
-                            MessageToast.show(oBundle.getText("msgEmployeeDeleteError"));
-                        }
-                    });
+                    oModel.remove(sPath,
+                        this.crudCallbacks("msgEmployeeDeleted", "msgEmployeeDeleteError",
+                            () => this.onNavBack()));
                 }
             });
         },
@@ -187,7 +172,7 @@ sap.ui.define([
         },
 
         onSaveSkill: function () {
-            const oModel = this.getOwnerComponent().getModel();
+            const oModel = this.getODataModel();
             const oBundle = this.getResourceBundle();
             const oSkillSelect = this.byId("skillSelect");
             const sSkillId = oSkillSelect.getSelectedKey();
@@ -204,22 +189,14 @@ sap.ui.define([
                 lastUsed: this.byId("skillLastUsed").getDateValue()
             };
 
-            const fnSuccess = (sMsgKey) => () => {
-                MessageToast.show(oBundle.getText(sMsgKey));
+            const fnAfterSave = () => {
                 oModel.refresh();
                 this._oSkillDialog.close();
             };
 
-            const fnError = (sMsgKey) => (oError) => {
-                console.error("Save skill failed:", oError);
-                MessageToast.show(oBundle.getText(sMsgKey));
-            };
-
             if (this._sEditSkillPath) {
-                oModel.update(this._sEditSkillPath, oSkillValues, {
-                    success: fnSuccess("msgSkillUpdated"),
-                    error: fnError("msgSkillUpdateError")
-                });
+                oModel.update(this._sEditSkillPath, oSkillValues,
+                    this.crudCallbacks("msgSkillUpdated", "msgSkillUpdateError", fnAfterSave));
                 return;
             }
 
@@ -227,29 +204,19 @@ sap.ui.define([
                 employee_ID: this.getView().getBindingContext().getProperty("ID"),
                 skill_ID: sSkillId,
                 ...oSkillValues
-            }, {
-                success: fnSuccess("msgSkillAdded"),
-                error: fnError("msgSkillAddError")
-            });
+            }, this.crudCallbacks("msgSkillAdded", "msgSkillAddError", fnAfterSave));
         },
 
         onRatingChange: function (oEvent) {
-            const oModel = this.getOwnerComponent().getModel();
+            const oModel = this.getODataModel();
             const sPath = oEvent.getSource().getBindingContext().getPath();
 
-            oModel.update(sPath, { rating: oEvent.getParameter("value") }, {
-                success: () => {
-                    MessageToast.show(this.getResourceBundle().getText("msgSkillUpdated"));
-                    oModel.refresh();
-                },
-                error: (oError) => {
-                    console.error("Update skill failed:", oError);
-                    MessageToast.show(this.getResourceBundle().getText("msgSkillUpdateError"));
-                }
-            });
+            oModel.update(sPath, { rating: oEvent.getParameter("value") },
+                this.crudCallbacks("msgSkillUpdated", "msgSkillUpdateError",
+                    () => oModel.refresh()));
         },
         onDeleteSkill: function (oEvent) {
-            const oModel = this.getOwnerComponent().getModel();
+            const oModel = this.getODataModel();
             const sPath = oEvent.getSource().getBindingContext().getPath();
 
             MessageBox.confirm(this.getResourceBundle().getText("msgConfirmDeleteSkill"), {
@@ -259,16 +226,9 @@ sap.ui.define([
                         return;
                     }
 
-                    oModel.remove(sPath, {
-                        success: () => {
-                            MessageToast.show(this.getResourceBundle().getText("msgSkillDeleted"));
-                            oModel.refresh();
-                        },
-                        error: (oError) => {
-                            console.error("Delete skill failed:", oError);
-                            MessageToast.show(this.getResourceBundle().getText("msgSkillDeleteError"));
-                        }
-                    });
+                    oModel.remove(sPath,
+                        this.crudCallbacks("msgSkillDeleted", "msgSkillDeleteError",
+                            () => oModel.refresh()));
                 }
             });
         }
