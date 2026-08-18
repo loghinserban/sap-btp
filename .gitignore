@@ -35,3 +35,6 @@ GHID_E2_MASTER_DATA.md
 PLAN_E3_E6_E7.md
 DEMO.md
 PASUL_0_SEED.md
+app/companymanagement/dist/
+app/userview/dist/
+app/companymanagement/package-lock.json

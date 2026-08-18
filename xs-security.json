@@ -1,5 +1,7 @@
 {
-  "description": "Security profile of called application",
+  "xsappname": "project",
+  "description": "Security profile of project application",
+  "tenant-mode": "dedicated",
   "scopes": [],
   "attributes": [],
   "role-templates": []

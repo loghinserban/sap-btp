@@ -5,7 +5,9 @@
     "@anthropic-ai/sdk": "^0.116.0",
     "@cap-js/hana": "^2",
     "@sap/cds": "^9",
-    "@sap/cds-odata-v2-adapter-proxy": "^1.9.21"
+    "@sap/cds-odata-v2-adapter-proxy": "^1.9.21",
+    "@sap/xsenv": "^6.2.2",
+    "@sap/xssec": "^4"
   },
   "devDependencies": {
     "@cap-js/sqlite": "^2.4",
@@ -27,6 +29,22 @@
     "requires": {
       "db": {
         "kind": "hana"
+      },
+      "[development]": {
+        "db": {
+          "kind": "hana",
+          "model": [
+            "srv",
+            "db"
+          ]
+        },
+        "auth": "dummy"
+      },
+      "[production]": {
+        "db": {
+          "kind": "hana"
+        },
+        "auth": "xsuaa"
       },
       "destinations": true,
       "html5-repo": true
