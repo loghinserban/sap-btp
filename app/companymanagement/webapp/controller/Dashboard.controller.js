@@ -33,7 +33,7 @@ sap.ui.define([
             this._setupDonut("skillsDonut", "skillsDonutPopover");
             this._setupDonut("departmentsDonut", "departmentsDonutPopover");
 
-            this.getRouter().getRoute("RouteDashboard")
+            this.getOwnerComponent().getRouter().getRoute("RouteDashboard")
                 .attachPatternMatched(this._onRouteMatched, this);
         },
 
@@ -68,7 +68,13 @@ sap.ui.define([
             oPage.setBusy(true);
 
             try {
-                const oData = await this.callFunction("getDashboard");
+                // const oData = await this.callFunction("getDashboard");
+
+
+                var oModel = this.getView().getModel("v4");
+                 var oBinding = oModel.bindContext("/getDashboard(...)"); 
+                  await oBinding.execute(); 
+                  var oData = oBinding.getBoundContext().getObject();
 
                 this.getView().getModel("dash").setData({
                     kpis: oData.kpis || EMPTY_DASHBOARD.kpis,
