@@ -1,101 +1,217 @@
 sap.ui.define([
-    "companymanagement/controller/BaseController",
+    "sap/ui/core/mvc/Controller",
+    "sap/ui/core/UIComponent",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
     "sap/m/MessageBox"
-], (BaseController, Filter, FilterOperator, JSONModel, MessageToast, MessageBox) => {
+], function (Controller, UIComponent, Filter, FilterOperator, JSONModel, MessageToast, MessageBox) {
     "use strict";
 
-    const BASIC_SEARCH_FIELDS = ["firstName", "lastName", "email"];
+    return Controller.extend("companymanagement.controller.View", {
 
-    return BaseController.extend("companymanagement.controller.View", {
-
-        //list report
-        onBeforeRebindTable(oEvent) {
-            const mBindingParams = oEvent.getParameter("bindingParams");
+        onBeforeRebindTable: function (oEvent) {
+            var mBindingParams = oEvent.getParameter("bindingParams");
 
             mBindingParams.parameters = mBindingParams.parameters || {};
             mBindingParams.parameters.expand = "department";
 
-            const sQuery = (this.byId("smartFilterBar").getBasicSearchValue() || "").trim();
+            var sQuery = (this.byId("smartFilterBar").getBasicSearchValue() || "").trim();
 
-            if (sQuery) {
-                mBindingParams.filters.push(new Filter({
-                    filters: BASIC_SEARCH_FIELDS.map(
-                        (sField) => new Filter(sField, FilterOperator.Contains, sQuery)
-                    ),
-                    and: false
-                }));
+            if (!sQuery) {
+                return;
             }
+
+            var aSearchFilters = [];
+            aSearchFilters.push(new Filter("firstName", FilterOperator.Contains, sQuery));
+            aSearchFilters.push(new Filter("lastName", FilterOperator.Contains, sQuery));
+            aSearchFilters.push(new Filter("email", FilterOperator.Contains, sQuery));
+
+            mBindingParams.filters.push(new Filter({ filters: aSearchFilters, and: false }));
         },
 
-        onItemPress(oEvent) {
-            const oItem = oEvent.getParameter("listItem");
-            const oContext = oItem && oItem.getBindingContext();
+        onItemPress: function (oEvent) {
+            var oItem = oEvent.getParameter("listItem");
+            var oContext = oItem.getBindingContext();
 
             if (!oContext) {
                 return;
             }
             oEvent.getSource().removeSelections(true);
 
-            this.getRouter().navTo("RouteDetail", { param: oContext.getProperty("ID") });
+            var oRouter = UIComponent.getRouterFor(this);
+            oRouter.navTo("RouteDetail", { param: oContext.getProperty("ID") });
         },
 
-        onNavToSearch() {
-            this.getRouter().navTo("RouteSearch");
+        onNavToSearch: function () {
+            UIComponent.getRouterFor(this).navTo("RouteSearch");
         },
 
-        onNavToMasterData() {
-            this.getRouter().navTo("RouteAdmin");
+        onNavToMasterData: function () {
+            UIComponent.getRouterFor(this).navTo("RouteAdmin");
         },
 
-        onNavToDashboard() {
-            this.getRouter().navTo("RouteDashboard");
+        onNavToDashboard: function () {
+            UIComponent.getRouterFor(this).navTo("RouteDashboard");
         },
 
-        //add employee
-        onOpenAddEmployeeDialog() {
-            return this.openEmployeeForm("add");
+        // ADD EMPLOYEE
+
+        onOpenAddEmployeeDialog: async function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            if (!this._oEmployeeForm) {
+                this._oEmployeeForm = await this.loadFragment({
+                    name: "companymanagement.view.EmployeeFormDialog"
+                });
+            }
+
+            if (!this.getView().getModel("form")) {
+                this.getView().setModel(new JSONModel(), "form");
+            }
+
+            this.getView().getModel("form").setData({
+                title: oBundle.getText("addEmployee"),
+                confirmText: oBundle.getText("addEmployee")
+            });
+
+            this.byId("formFirstName").setValue("");
+            this.byId("formLastName").setValue("");
+            this.byId("formEmail").setValue("");
+            this.byId("formDateOfBirth").setDateValue(null);
+            this.byId("formExperience").setValue(0);
+            this.byId("formDepartment").setSelectedKey("");
+
+            this.byId("formFirstName").setValueState("None");
+            this.byId("formLastName").setValueState("None");
+            this.byId("formEmail").setValueState("None");
+            this.byId("formDateOfBirth").setValueState("None");
+            this.byId("formExperience").setValueState("None");
+            this.byId("formDepartment").setValueState("None");
+
+            this._oEmployeeForm.open();
         },
 
-        async onSeedData() {
-            try {
-                const oData = await this.callAction("seedDemoData", { count: 25 });
-                MessageToast.show(oData.value);
-                this.byId("employeeSmartTable").rebindTable();
-            } catch (e) {
-                MessageToast.show("Seeding failed: " + e.message);
+        onCloseEmployeeForm: function () {
+            this._oEmployeeForm.close();
+        },
+
+        onRequiredFieldLiveChange: function (oEvent) {
+            var oField = oEvent.getSource();
+            var sValue;
+
+            if (oField.getSelectedKey) {
+                sValue = oField.getSelectedKey();
+            } else {
+                sValue = oField.getValue().trim();
+            }
+
+            oField.setValueState(sValue ? "None" : "Error");
+        },
+
+        onDateOfBirthChange: function (oEvent) {
+            var oDatePicker = oEvent.getSource();
+            var bValid = oEvent.getParameter("valid");
+            var oDate = oDatePicker.getDateValue();
+
+            if (!bValid || (oDate && oDate > new Date())) {
+                oDatePicker.setValueState("Error");
+            } else {
+                oDatePicker.setValueState("None");
             }
         },
 
-        onCloseEmployeeForm() {
-            this.closeEmployeeForm();
-        },
+        onEmployeeFormConfirm: function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var rEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-        onEmployeeFormConfirm() {
-            const oPayload = this.collectEmployeeForm();
+            var oFirstName = this.byId("formFirstName");
+            var oLastName = this.byId("formLastName");
+            var oEmail = this.byId("formEmail");
+            var oDateOfBirth = this.byId("formDateOfBirth");
+            var oDepartment = this.byId("formDepartment");
 
-            if (!oPayload) {
+            var sFirstName = oFirstName.getValue().trim();
+            var sLastName = oLastName.getValue().trim();
+            var sEmail = oEmail.getValue().trim();
+            var sDepartmentId = oDepartment.getSelectedKey();
+            var oBirthDate = oDateOfBirth.getDateValue();
+
+            oFirstName.setValueState(sFirstName ? "None" : "Error");
+            oLastName.setValueState(sLastName ? "None" : "Error");
+            oEmail.setValueState(sEmail ? "None" : "Error");
+            oDepartment.setValueState(sDepartmentId ? "None" : "Error");
+
+            if (!sFirstName || !sLastName || !sEmail || !sDepartmentId) {
+                MessageToast.show(oBundle.getText("msgFillRequiredFields"));
                 return;
             }
 
-            this.getODataModel().create("/Employees", oPayload,
-                this.crudCallbacks("msgEmployeeAdded", "msgEmployeeAddError", () => {
-                    this.byId("employeeSmartTable")?.rebindTable();
-                    this.closeEmployeeForm();
-                })
-            );
-        },
-        async onOpenUploadCvDialog() {
-            this._oCvDialog ??= await this.loadFragment({
-                name: "companymanagement.view.UploadCvDialog"
+            if (!rEmail.test(sEmail)) {
+                oEmail.setValueState("Error");
+                oEmail.setValueStateText(oBundle.getText("msgInvalidEmail"));
+                MessageToast.show(oBundle.getText("msgInvalidEmail"));
+                return;
+            }
+
+            if (oBirthDate && oBirthDate > new Date()) {
+                oDateOfBirth.setValueState("Error");
+                oDateOfBirth.setValueStateText(oBundle.getText("msgInvalidDateOfBirth"));
+                MessageToast.show(oBundle.getText("msgInvalidDateOfBirth"));
+                return;
+            }
+
+            var oNewEmployee = {
+                firstName: sFirstName,
+                lastName: sLastName,
+                email: sEmail,
+                dateOfBirth: oBirthDate || null,
+                experience: this.byId("formExperience").getValue() || 0,
+                department_ID: sDepartmentId
+            };
+
+            oModel.create("/Employees", oNewEmployee, {
+                success: () => {
+                    MessageToast.show(oBundle.getText("msgEmployeeAdded"));
+                    this.byId("employeeSmartTable").rebindTable();
+                    this._oEmployeeForm.close();
+                },
+                error: () => MessageToast.show(oBundle.getText("msgEmployeeAddError"))
             });
+        },
+
+        onSeedData: async function () {
+            var oModel = this.getOwnerComponent().getModel("v4");
+            var oBinding = oModel.bindContext("/seedDemoData(...)");
+
+            oBinding.setParameter("count", 25);
+
+            try {
+                await oBinding.execute();
+                var sMessage = oBinding.getBoundContext().getObject().value;
+
+                MessageToast.show(sMessage);
+                this.byId("employeeSmartTable").rebindTable();
+            } catch (oError) {
+                MessageToast.show("Seeding failed: " + oError.message);
+            }
+        },
+
+        // CV UPLOAD
+
+        onOpenUploadCvDialog: async function () {
+            if (!this._oCvDialog) {
+                this._oCvDialog = await this.loadFragment({
+                    name: "companymanagement.view.UploadCvDialog"
+                });
+            }
 
             if (!this.getView().getModel("cv")) {
                 this.getView().setModel(new JSONModel(), "cv");
             }
+
             this.getView().getModel("cv").setData({
                 busy: false,
                 profile: null,
@@ -107,34 +223,28 @@ sap.ui.define([
             this._oCvDialog.open();
         },
 
-        onCloseCvDialog() {
-            this._oCvDialog?.close();
+        onCloseCvDialog: function () {
+            this._oCvDialog.close();
         },
 
-        onCvFileSelected(oEvent) {
-            this._oCvFile = oEvent.getParameter("files")?.[0] || null;
+        onCvFileSelected: function (oEvent) {
+            var aFiles = oEvent.getParameter("files");
+            this._oCvFile = aFiles && aFiles[0] ? aFiles[0] : null;
         },
 
-        onCvTypeMismatch() {
-            MessageToast.show(this.getResourceBundle().getText("msgCvNotPdf"));
+        onCvTypeMismatch: function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            MessageToast.show(oBundle.getText("msgCvNotPdf"));
         },
 
-        onCvFileSizeExceed() {
-            MessageToast.show(this.getResourceBundle().getText("msgCvTooLarge"));
+        onCvFileSizeExceed: function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            MessageToast.show(oBundle.getText("msgCvTooLarge"));
         },
 
-        _readAsBase64(oFile) {
-            return new Promise((resolve, reject) => {
-                const oReader = new FileReader();
-                oReader.onload = () => resolve(String(oReader.result).split(",")[1]);
-                oReader.onerror = () => reject(new Error("Could not read the file."));
-                oReader.readAsDataURL(oFile);
-            });
-        },
-
-        async onCvExtract() {
-            const oBundle = this.getResourceBundle();
-            const oCvModel = this.getView().getModel("cv");
+        onCvExtract: async function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oCvModel = this.getView().getModel("cv");
 
             if (!this._oCvFile) {
                 MessageToast.show(oBundle.getText("msgCvPickFile"));
@@ -144,90 +254,133 @@ sap.ui.define([
             oCvModel.setProperty("/busy", true);
 
             try {
-                const sBase64 = await this._readAsBase64(this._oCvFile);
+                var sBase64 = await this._readFileAsBase64(this._oCvFile);
 
-                const oProfile = await this.callAction("extractCv", {
-                    fileName: this._oCvFile.name,
-                    contentBase64: sBase64
-                });
+                var oModel = this.getOwnerComponent().getModel("v4");
+                var oBinding = oModel.bindContext("/extractCv(...)");
 
-                oProfile.skills = (oProfile.skills || []).map((oSkill) => ({
-                    ...oSkill,
-                    selected: !!oSkill.skillID
-                }));
+                oBinding.setParameter("fileName", this._oCvFile.name);
+                oBinding.setParameter("contentBase64", sBase64);
+
+                await oBinding.execute();
+                var oProfile = oBinding.getBoundContext().getObject();
+
+                var aSkills = oProfile.skills || [];
+                for (var i = 0; i < aSkills.length; i++) {
+                    aSkills[i].selected = !!aSkills[i].skillID;
+                }
+                oProfile.skills = aSkills;
 
                 oCvModel.setProperty("/profile", oProfile);
 
-                if (!oProfile.skills.length) {
+                if (!aSkills.length) {
                     MessageToast.show(oBundle.getText("msgCvNoSkills"));
                 }
-            } catch (e) {
-                console.error("CV extraction failed:", e);
-                MessageToast.show(oBundle.getText("msgCvExtractError", [e.message]));
-            } finally {
-                oCvModel.setProperty("/busy", false);
+            } catch (oError) {
+                MessageToast.show(oBundle.getText("msgCvExtractError", [oError.message]));
             }
+
+            oCvModel.setProperty("/busy", false);
         },
 
-        _confirmNewSkills(aNames) {
-            const oBundle = this.getResourceBundle();
+        _readFileAsBase64: function (oFile) {
+            return new Promise(function (resolve, reject) {
+                var oReader = new FileReader();
 
-            return new Promise((resolve) => {
-                MessageBox.confirm(oBundle.getText("msgCvConfirmNewSkills", [aNames.join(", ")]), {
-                    title: oBundle.getText("cvConfirmNewSkillsTitle"),
-                    onClose: (sAction) => resolve(sAction === MessageBox.Action.OK)
-                });
+                oReader.onload = function () {
+                    resolve(String(oReader.result).split(",")[1]);
+                };
+                oReader.onerror = function () {
+                    reject(new Error("Could not read the file."));
+                };
+
+                oReader.readAsDataURL(oFile);
             });
         },
 
-        async onCvCreateEmployee() {
-            const oBundle = this.getResourceBundle();
-            const oCvModel = this.getView().getModel("cv");
-            const oData = oCvModel.getData();
-            const oProfile = oData.profile;
+        onCvCreateEmployee: async function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oCvModel = this.getView().getModel("cv");
+            var oData = oCvModel.getData();
+            var oProfile = oData.profile;
 
-            if (!oProfile) { return; }
-
-            const aSelected = oProfile.skills.filter((oSkill) => oSkill.selected);
-
-            const aSkills = aSelected.map(({ skillID, name, rating, lastUsed, evidence }) =>
-                ({ skillID, name, rating, lastUsed, evidence }));
-
-            // let the user see the list before it happens
-            const aNewNames = aSelected
-                .filter((oSkill) => !oSkill.skillID)
-                .map((oSkill) => (oSkill.name || "").trim())
-                .filter(Boolean);
-
-            if (aNewNames.length && !(await this._confirmNewSkills(aNewNames))) {
+            if (!oProfile) {
                 return;
+            }
+
+            var aSkills = [];
+            var aNewNames = [];
+
+            for (var i = 0; i < oProfile.skills.length; i++) {
+                var oSkill = oProfile.skills[i];
+
+                if (!oSkill.selected) {
+                    continue;
+                }
+
+                aSkills.push({
+                    skillID: oSkill.skillID,
+                    name: oSkill.name,
+                    rating: oSkill.rating,
+                    lastUsed: oSkill.lastUsed,
+                    evidence: oSkill.evidence
+                });
+
+                if (!oSkill.skillID && oSkill.name && oSkill.name.trim()) {
+                    aNewNames.push(oSkill.name.trim());
+                }
+            }
+
+            // skill nou = intra in catalogul comun, deci intrebam intai
+            if (aNewNames.length) {
+                var bConfirmed = await this._confirmNewSkills(aNewNames);
+                if (!bConfirmed) {
+                    return;
+                }
             }
 
             oCvModel.setProperty("/busy", true);
 
             try {
-                const oResult = await this.callAction("createEmployeeFromCv", {
-                    profile: {
-                        firstName: oProfile.firstName,
-                        lastName: oProfile.lastName,
-                        email: oProfile.email,
-                        experience: Number(oProfile.experience) || 0,
-                        skills: aSkills
-                    },
-                    departmentID: oData.departmentID || null
+                var oModel = this.getOwnerComponent().getModel("v4");
+                var oBinding = oModel.bindContext("/createEmployeeFromCv(...)");
+
+                oBinding.setParameter("profile", {
+                    firstName: oProfile.firstName,
+                    lastName: oProfile.lastName,
+                    email: oProfile.email,
+                    experience: Number(oProfile.experience) || 0,
+                    skills: aSkills
                 });
+                oBinding.setParameter("departmentID", oData.departmentID || null);
 
-                MessageToast.show(oResult.value);
+                await oBinding.execute();
+                var sMessage = oBinding.getBoundContext().getObject().value;
 
-                this.onCloseCvDialog();
-                this.getODataModel().refresh();
-                this.byId("employeeSmartTable")?.rebindTable();
-            } catch (e) {
-                console.error("Create from CV failed:", e);
-                MessageToast.show(oBundle.getText("msgCvCreateError", [e.message]));
-            } finally {
-                oCvModel.setProperty("/busy", false);
+                MessageToast.show(sMessage);
+
+                this._oCvDialog.close();
+                this.getOwnerComponent().getModel().refresh();
+                this.byId("employeeSmartTable").rebindTable();
+            } catch (oError) {
+                MessageToast.show(oBundle.getText("msgCvCreateError", [oError.message]));
             }
+
+            oCvModel.setProperty("/busy", false);
         },
+
+        _confirmNewSkills: function (aNames) {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            return new Promise(function (resolve) {
+                MessageBox.confirm(oBundle.getText("msgCvConfirmNewSkills", [aNames.join(", ")]), {
+                    title: oBundle.getText("cvConfirmNewSkillsTitle"),
+                    onClose: function (oAction) {
+                        resolve(oAction === MessageBox.Action.OK);
+                    }
+                });
+            });
+        }
+
     });
 });

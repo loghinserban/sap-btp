@@ -42,7 +42,7 @@ sap.ui.define([
 
     return Controller.extend("userview.controller.User", {
         onInit: function () {
-            this._sCurrentEmployeeId = this._resolveCurrentEmployeeId();
+            this._resolveCurrentEmployeeId();
 
             var oViewModel = new JSONModel({
                 currentUser: {
@@ -103,7 +103,9 @@ sap.ui.define([
 
             if (!oModel || !sId) return;
 
-            oModel.read(this._entityPath(oModel, "Employees", sId), {
+            var key = oModel.createKey("/Employees", { ID : sId });
+                
+            oModel.read(key , {
                 urlParameters: {
                     "$expand": "department,skills/skill,reviews"
                 },
@@ -134,30 +136,39 @@ sap.ui.define([
             });
         },
 
-        _resolveCurrentEmployeeId: function () {
-            var sId;
+        _resolveCurrentEmployeeId: async function () {
+            // var sId;
 
-            try {
-                var oParams = new URLSearchParams(window.location.search);
-                sId = oParams.get("employeeId") || oParams.get("empId");
-            } catch (e) { /* no URL params available */ }
+            // try {
+            //     var oParams = new URLSearchParams(window.location.search);
+            //     sId = oParams.get("employeeId") || oParams.get("empId");
+            // } catch (e) { /* no URL params available */ }
 
-            if (!sId) {
+            // if (!sId) {
+
                 try {
-                    var oCompData = this.getOwnerComponent().getComponentData();
-                    var oStartup = oCompData && oCompData.startupParameters;
-                    sId = (oStartup && oStartup.employeeId && oStartup.employeeId[0]) ||
-                        (oStartup && oStartup.empId && oStartup.empId[0]);
-                } catch (e2) { /* not started from the launchpad */ }
-            }
+                    if (window.location.href.includes("applicationstudio")) {
+                        this._sCurrentEmployeeId = DEFAULT_EMPLOYEE_ID;  
+                    } 
+                        else {
+            
+                        const userInfoService = await sap.ushell.Container.getServiceAsync("UserInfo");
+                        console.log("User ID:", userInfoService.getId());
+                        console.log("Full Name:", userInfoService.getFullName());
+                        console.log("Email:", userInfoService.getEmail());
+                        this._sCurrentEmployeeId = userInfoService.getId();
+                    }
 
-            if (sId) {
-                localStorage.setItem("currentEmployeeId", sId);
-                return sId;
-            }
+                } catch (e2) {
+                    console.log("e2:", e2); /* not started from the launchpad */ }
+            
 
-            //return localStorage.getItem("currentEmployeeId") || DEFAULT_EMPLOYEE_ID;
-            return DEFAULT_EMPLOYEE_ID;
+            // if (sId) {
+            //     localStorage.setItem("currentEmployeeId", sId);
+            //     return sId;
+            // }
+
+            // return DEFAULT_EMPLOYEE_ID;
         },
 
         onUserSearch: function (oEvent) {

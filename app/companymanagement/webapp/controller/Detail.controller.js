@@ -1,28 +1,27 @@
 sap.ui.define([
-    "companymanagement/controller/BaseController",
+    "sap/ui/core/mvc/Controller",
+    "sap/ui/core/UIComponent",
+    "sap/ui/core/routing/History",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
-    "sap/m/MessageBox",
-    "sap/ui/core/routing/History",
-    "sap/ui/core/UIComponent"
-], (BaseController, JSONModel, MessageToast, MessageBox, History, UIComponent) => {
+    "sap/m/MessageBox"
+], function (Controller, UIComponent, History, JSONModel, MessageToast, MessageBox) {
     "use strict";
 
-    return BaseController.extend("companymanagement.controller.Detail", {
+    return Controller.extend("companymanagement.controller.Detail", {
 
-        onInit() {
+        onInit: function () {
             this.getView().setModel(new JSONModel({ averageRating: 0 }), "detail");
 
-            this.getRouter()
-                .getRoute("RouteDetail")
-                .attachPatternMatched(this._onMatched, this);
+            var oRouter = UIComponent.getRouterFor(this);
+            oRouter.getRoute("RouteDetail").attachPatternMatched(this._onMatched, this);
         },
 
-        _onMatched(oEvent) {
-            const sId = oEvent.getParameter("arguments").param;
+        _onMatched: function (oEvent) {
+            var sId = oEvent.getParameter("arguments").param;
 
             this.getView().bindElement({
-                path: `/Employees(guid'${sId}')`,
+                path: "/Employees(guid'" + sId + "')",
                 parameters: {
                     expand: "department,skills/skill,reviews"
                 },
@@ -32,139 +31,268 @@ sap.ui.define([
             });
         },
 
-        _onDataReceived() {
-            const oContext = this.getView().getBindingContext();
-            const aReviews = (oContext && oContext.getProperty("reviews")) || [];
-            const oModel = this.getODataModel();
+        _onDataReceived: function () {
+            var oModel = this.getOwnerComponent().getModel();
+            var oContext = this.getView().getBindingContext();
+            var aReviews = oContext ? oContext.getProperty("reviews") : null;
 
+            if (!aReviews) {
+                aReviews = [];
+            }
 
-            const aStars = aReviews
-                .map((vReview) => {
-                    const oReview = typeof vReview === "string"
-                        ? oModel.getObject(`/${vReview}`)
-                        : vReview;
-                    return oReview && oReview.stars;
-                })
-                .filter((iStars) => typeof iStars === "number");
+            var iSum = 0;
+            var iCount = 0;
 
-            const fAverage = aStars.length
-                ? aStars.reduce((iSum, iStars) => iSum + iStars, 0) / aStars.length
-                : 0;
+            for (var i = 0; i < aReviews.length; i++) {
+                var oReview = aReviews[i];
+
+                if (typeof oReview === "string") {
+                    oReview = oModel.getObject("/" + oReview);
+                }
+
+                if (oReview && typeof oReview.stars === "number") {
+                    iSum = iSum + oReview.stars;
+                    iCount = iCount + 1;
+                }
+            }
+
+            var fAverage = 0;
+            if (iCount) {
+                fAverage = iSum / iCount;
+            }
 
             this.getView().getModel("detail").setProperty("/averageRating", fAverage);
         },
 
-        //edit
-        onOpenEditDialog() {
-            const oContext = this.getView().getBindingContext();
-
-            if (!oContext) {
-                return undefined;
+        formatFreshness: function (sLastUsed) {
+            if (!sLastUsed) {
+                return "None";
             }
 
-            return this.openEmployeeForm("edit", {
-                firstName: oContext.getProperty("firstName"),
-                lastName: oContext.getProperty("lastName"),
-                email: oContext.getProperty("email"),
-                dateOfBirth: oContext.getProperty("dateOfBirth"),
-                experience: oContext.getProperty("experience"),
-                department_ID: oContext.getProperty("department_ID")
-            });
+            var iMonths = Math.floor((new Date() - new Date(sLastUsed)) / (1000 * 60 * 60 * 24 * 30.44));
+
+            if (iMonths <= 12) {
+                return "Success";
+            }
+            if (iMonths <= 24) {
+                return "Warning";
+            }
+            return "Error";
         },
 
-        onCloseEmployeeForm() {
-            this.closeEmployeeForm();
+        onNavBack: function () {
+            var oHistory = History.getInstance();
+            var sPreviousHash = oHistory.getPreviousHash();
+
+            if (sPreviousHash !== undefined) {
+                window.history.go(-1);
+            } else {
+                UIComponent.getRouterFor(this).navTo("RouteView", {}, true);
+            }
         },
 
-        onEmployeeFormConfirm() {
-            const oPayload = this.collectEmployeeForm();
+        // EDIT EMPLOYEE
 
-            if (!oPayload) {
+        onOpenEditDialog: async function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oContext = this.getView().getBindingContext();
+
+            if (!oContext) {
                 return;
             }
 
-            const sPath = this.getView().getBindingContext().getPath();
+            if (!this._oEmployeeForm) {
+                this._oEmployeeForm = await this.loadFragment({
+                    name: "companymanagement.view.EmployeeFormDialog"
+                });
+            }
 
-            this.getODataModel().update(sPath, oPayload,
-                this.crudCallbacks("msgEmployeeUpdated", "msgEmployeeUpdateError",
-                    () => this.closeEmployeeForm()));
+            if (!this.getView().getModel("form")) {
+                this.getView().setModel(new JSONModel(), "form");
+            }
+
+            this.getView().getModel("form").setData({
+                title: oBundle.getText("editEmployee"),
+                confirmText: oBundle.getText("save")
+            });
+
+            this.byId("formFirstName").setValue(oContext.getProperty("firstName") || "");
+            this.byId("formLastName").setValue(oContext.getProperty("lastName") || "");
+            this.byId("formEmail").setValue(oContext.getProperty("email") || "");
+            this.byId("formDateOfBirth").setDateValue(oContext.getProperty("dateOfBirth") || null);
+            this.byId("formExperience").setValue(oContext.getProperty("experience") || 0);
+            this.byId("formDepartment").setSelectedKey(oContext.getProperty("department_ID") || "");
+
+            this.byId("formFirstName").setValueState("None");
+            this.byId("formLastName").setValueState("None");
+            this.byId("formEmail").setValueState("None");
+            this.byId("formDateOfBirth").setValueState("None");
+            this.byId("formExperience").setValueState("None");
+            this.byId("formDepartment").setValueState("None");
+
+            this._oEmployeeForm.open();
         },
 
-        //delete nav
-        onDeleteEmployee() {
-            const oBundle = this.getResourceBundle();
-            const oModel = this.getODataModel();
-            const sPath = this.getView().getBindingContext().getPath();
+        onCloseEmployeeForm: function () {
+            this._oEmployeeForm.close();
+        },
+
+        onRequiredFieldLiveChange: function (oEvent) {
+            var oField = oEvent.getSource();
+            var sValue;
+
+            if (oField.getSelectedKey) {
+                sValue = oField.getSelectedKey();
+            } else {
+                sValue = oField.getValue().trim();
+            }
+
+            oField.setValueState(sValue ? "None" : "Error");
+        },
+
+        onDateOfBirthChange: function (oEvent) {
+            var oDatePicker = oEvent.getSource();
+            var bValid = oEvent.getParameter("valid");
+            var oDate = oDatePicker.getDateValue();
+
+            if (!bValid || (oDate && oDate > new Date())) {
+                oDatePicker.setValueState("Error");
+            } else {
+                oDatePicker.setValueState("None");
+            }
+        },
+
+        onEmployeeFormConfirm: function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var rEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+            var oFirstName = this.byId("formFirstName");
+            var oLastName = this.byId("formLastName");
+            var oEmail = this.byId("formEmail");
+            var oDateOfBirth = this.byId("formDateOfBirth");
+            var oDepartment = this.byId("formDepartment");
+
+            var sFirstName = oFirstName.getValue().trim();
+            var sLastName = oLastName.getValue().trim();
+            var sEmail = oEmail.getValue().trim();
+            var sDepartmentId = oDepartment.getSelectedKey();
+            var oBirthDate = oDateOfBirth.getDateValue();
+
+            oFirstName.setValueState(sFirstName ? "None" : "Error");
+            oLastName.setValueState(sLastName ? "None" : "Error");
+            oEmail.setValueState(sEmail ? "None" : "Error");
+            oDepartment.setValueState(sDepartmentId ? "None" : "Error");
+
+            if (!sFirstName || !sLastName || !sEmail || !sDepartmentId) {
+                MessageToast.show(oBundle.getText("msgFillRequiredFields"));
+                return;
+            }
+
+            if (!rEmail.test(sEmail)) {
+                oEmail.setValueState("Error");
+                oEmail.setValueStateText(oBundle.getText("msgInvalidEmail"));
+                MessageToast.show(oBundle.getText("msgInvalidEmail"));
+                return;
+            }
+
+            if (oBirthDate && oBirthDate > new Date()) {
+                oDateOfBirth.setValueState("Error");
+                oDateOfBirth.setValueStateText(oBundle.getText("msgInvalidDateOfBirth"));
+                MessageToast.show(oBundle.getText("msgInvalidDateOfBirth"));
+                return;
+            }
+
+            var oUpdatedEmployee = {
+                firstName: sFirstName,
+                lastName: sLastName,
+                email: sEmail,
+                dateOfBirth: oBirthDate || null,
+                experience: this.byId("formExperience").getValue() || 0,
+                department_ID: sDepartmentId
+            };
+
+            var sPath = this.getView().getBindingContext().getPath();
+
+            oModel.update(sPath, oUpdatedEmployee, {
+                success: () => {
+                    MessageToast.show(oBundle.getText("msgEmployeeUpdated"));
+                    this._oEmployeeForm.close();
+                },
+                error: () => MessageToast.show(oBundle.getText("msgEmployeeUpdateError"))
+            });
+        },
+
+        onDeleteEmployee: function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var sPath = this.getView().getBindingContext().getPath();
 
             MessageBox.confirm(oBundle.getText("msgConfirmDelete"), {
                 title: oBundle.getText("msgConfirmDeleteTitle"),
-                onClose: (sAction) => {
-                    if (sAction !== MessageBox.Action.OK) {
+                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+                onClose: (oAction) => {
+                    if (oAction !== MessageBox.Action.OK) {
                         return;
                     }
 
-                    oModel.remove(sPath,
-                        this.crudCallbacks("msgEmployeeDeleted", "msgEmployeeDeleteError",
-                            () => this.onNavBack()));
+                    oModel.remove(sPath, {
+                        success: () => {
+                            MessageToast.show(oBundle.getText("msgEmployeeDeleted"));
+                            this.onNavBack();
+                        },
+                        error: () => MessageToast.show(oBundle.getText("msgEmployeeDeleteError"))
+                    });
                 }
             });
         },
 
-        onNavBack: function () {
-            const history = History.getInstance();
-            const previousHash = history.getPreviousHash();
-            if (previousHash !== undefined) {
-                window.history.go(-1);
-            } else {
-                const router = UIComponent.getRouterFor(this);
-                router.navTo("RouteView", {}, true);
-            }
-        },
-
-
         // SKILLS
 
-        _loadSkillDialog: async function () {
+        onAddSkillDialog: async function () {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
             if (!this._oSkillDialog) {
                 this._oSkillDialog = await this.loadFragment({
                     name: "companymanagement.view.SkillDialog"
                 });
             }
-            return this._oSkillDialog;
-        },
-
-        onAddSkillDialog: async function () {
-            const oDialog = await this._loadSkillDialog();
 
             this._sEditSkillPath = null;
 
-            oDialog.setTitle(this.getResourceBundle().getText("addSkill"));
+            this._oSkillDialog.setTitle(oBundle.getText("addSkill"));
             this.byId("skillSelect").setEnabled(true);
             this.byId("skillSelect").setSelectedKey("");
             this.byId("skillSelect").setValueState("None");
             this.byId("skillRating").setValue(3);
             this.byId("skillLastUsed").setDateValue(null);
-            oDialog.open();
+            this._oSkillDialog.open();
         },
 
         onEditSkillDialog: async function (oEvent) {
-            const oContext = oEvent.getSource().getBindingContext();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oContext = oEvent.getSource().getBindingContext();
+
             if (!oContext) {
                 return;
             }
 
-            const oDialog = await this._loadSkillDialog();
-            const oSkillData = oContext.getObject();
+            if (!this._oSkillDialog) {
+                this._oSkillDialog = await this.loadFragment({
+                    name: "companymanagement.view.SkillDialog"
+                });
+            }
 
+            var oSkill = oContext.getObject();
             this._sEditSkillPath = oContext.getPath();
 
-            oDialog.setTitle(this.getResourceBundle().getText("editSkill"));
+            this._oSkillDialog.setTitle(oBundle.getText("editSkill"));
             this.byId("skillSelect").setEnabled(false);
-            this.byId("skillSelect").setSelectedKey(oSkillData.skill_ID);
+            this.byId("skillSelect").setSelectedKey(oSkill.skill_ID);
             this.byId("skillSelect").setValueState("None");
-            this.byId("skillRating").setValue(oSkillData.rating);
-            this.byId("skillLastUsed").setDateValue(oSkillData.lastUsed ? new Date(oSkillData.lastUsed) : null);
-            oDialog.open();
+            this.byId("skillRating").setValue(oSkill.rating);
+            this.byId("skillLastUsed").setDateValue(oSkill.lastUsed ? new Date(oSkill.lastUsed) : null);
+            this._oSkillDialog.open();
         },
 
         onCloseSkillDialog: function () {
@@ -172,10 +300,10 @@ sap.ui.define([
         },
 
         onSaveSkill: function () {
-            const oModel = this.getODataModel();
-            const oBundle = this.getResourceBundle();
-            const oSkillSelect = this.byId("skillSelect");
-            const sSkillId = oSkillSelect.getSelectedKey();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var oSkillSelect = this.byId("skillSelect");
+            var sSkillId = oSkillSelect.getSelectedKey();
 
             if (!sSkillId) {
                 oSkillSelect.setValueState("Error");
@@ -184,51 +312,76 @@ sap.ui.define([
             }
             oSkillSelect.setValueState("None");
 
-            const oSkillValues = {
+            var oSkillValues = {
                 rating: this.byId("skillRating").getValue(),
                 lastUsed: this.byId("skillLastUsed").getDateValue()
             };
 
-            const fnAfterSave = () => {
-                oModel.refresh();
-                this._oSkillDialog.close();
-            };
-
             if (this._sEditSkillPath) {
-                oModel.update(this._sEditSkillPath, oSkillValues,
-                    this.crudCallbacks("msgSkillUpdated", "msgSkillUpdateError", fnAfterSave));
+                oModel.update(this._sEditSkillPath, oSkillValues, {
+                    success: () => {
+                        MessageToast.show(oBundle.getText("msgSkillUpdated"));
+                        oModel.refresh();
+                        this._oSkillDialog.close();
+                    },
+                    error: () => MessageToast.show(oBundle.getText("msgSkillUpdateError"))
+                });
                 return;
             }
 
-            oModel.create("/EmployeeSkills", {
+            var oNewSkill = {
                 employee_ID: this.getView().getBindingContext().getProperty("ID"),
                 skill_ID: sSkillId,
-                ...oSkillValues
-            }, this.crudCallbacks("msgSkillAdded", "msgSkillAddError", fnAfterSave));
+                rating: oSkillValues.rating,
+                lastUsed: oSkillValues.lastUsed
+            };
+
+            oModel.create("/EmployeeSkills", oNewSkill, {
+                success: () => {
+                    MessageToast.show(oBundle.getText("msgSkillAdded"));
+                    oModel.refresh();
+                    this._oSkillDialog.close();
+                },
+                error: () => MessageToast.show(oBundle.getText("msgSkillAddError"))
+            });
         },
 
         onRatingChange: function (oEvent) {
-            const oModel = this.getODataModel();
-            const sPath = oEvent.getSource().getBindingContext().getPath();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var sPath = oEvent.getSource().getBindingContext().getPath();
 
-            oModel.update(sPath, { rating: oEvent.getParameter("value") },
-                this.crudCallbacks("msgSkillUpdated", "msgSkillUpdateError",
-                    () => oModel.refresh()));
+            oModel.update(sPath, { rating: oEvent.getParameter("value") }, {
+                success: () => {
+                    MessageToast.show(oBundle.getText("msgSkillUpdated"));
+                    oModel.refresh();
+                },
+                error: () => MessageToast.show(oBundle.getText("msgSkillUpdateError"))
+            });
         },
-        onDeleteSkill: function (oEvent) {
-            const oModel = this.getODataModel();
-            const sPath = oEvent.getSource().getBindingContext().getPath();
 
-            MessageBox.confirm(this.getResourceBundle().getText("msgConfirmDeleteSkill"), {
-                title: this.getResourceBundle().getText("msgConfirmDeleteTitle"),
-                onClose: (sAction) => {
-                    if (sAction !== MessageBox.Action.OK) {
+        onDeleteSkill: function (oEvent) {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var sPath = oEvent.getSource().getBindingContext().getPath();
+
+            MessageBox.confirm(oBundle.getText("msgConfirmDeleteSkill"), {
+                title: oBundle.getText("msgConfirmDeleteTitle"),
+                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+                onClose: function (oAction) {
+                    if (oAction !== MessageBox.Action.OK) {
                         return;
                     }
 
-                    oModel.remove(sPath,
-                        this.crudCallbacks("msgSkillDeleted", "msgSkillDeleteError",
-                            () => oModel.refresh()));
+                    oModel.remove(sPath, {
+                        success: function () {
+                            MessageToast.show(oBundle.getText("msgSkillDeleted"));
+                            oModel.refresh();
+                        },
+                        error: function () {
+                            MessageToast.show(oBundle.getText("msgSkillDeleteError"));
+                        }
+                    });
                 }
             });
         }

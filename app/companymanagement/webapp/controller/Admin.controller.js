@@ -1,22 +1,21 @@
 sap.ui.define([
-    "companymanagement/controller/BaseController",
-    "sap/ui/model/json/JSONModel",
+    "sap/ui/core/mvc/Controller",
+    "sap/ui/core/UIComponent",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
+    "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
     "sap/m/MessageBox"
-], function (BaseController, JSONModel, Filter, FilterOperator, MessageToast, MessageBox) {
+], function (Controller, UIComponent, Filter, FilterOperator, JSONModel, MessageToast, MessageBox) {
     "use strict";
 
-    return BaseController.extend("companymanagement.controller.Admin", {
+    return Controller.extend("companymanagement.controller.Admin", {
 
         onInit: function () {
-            // modele locale doar pentru textele din dialoguri
             this.getView().setModel(new JSONModel({ message: "" }), "reassign");
             this.getView().setModel(new JSONModel({ message: "" }), "merge");
         },
 
-        // verde = neatribuit (se poate sterge), altfel doar informativ
         formatUsageState: function (iCount) {
             return iCount ? "Information" : "Success";
         },
@@ -30,56 +29,74 @@ sap.ui.define([
         },
 
         _filterByName: function (sTableId, sQuery) {
-            const oBinding = this.byId(sTableId).getBinding("items");
+            var oBinding = this.byId(sTableId).getBinding("items");
+
             if (!oBinding) {
                 return;
             }
 
-            const sValue = (sQuery || "").trim();
-            oBinding.filter(sValue ? [new Filter("name", FilterOperator.Contains, sValue)] : []);
+            var sValue = (sQuery || "").trim();
+
+            if (sValue) {
+                oBinding.filter([new Filter("name", FilterOperator.Contains, sValue)]);
+            } else {
+                oBinding.filter([]);
+            }
         },
 
         onNavBack: function () {
-            this.getRouter().navTo("RouteView", {}, true);
+            UIComponent.getRouterFor(this).navTo("RouteView", {}, true);
         },
 
-    //skills
+        // SKILLS
 
         onAddSkill: async function () {
-            const oDialog = await this._loadSkillDialog();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-            this._sEditSkillPath = null;  
+            if (!this._oSkillDialog) {
+                this._oSkillDialog = await this.loadFragment({
+                    name: "companymanagement.view.SkillFormDialog"
+                });
+            }
 
-            oDialog.setTitle(this.getResourceBundle().getText("createSkill"));
+            this._sEditSkillPath = null;
+
+            this._oSkillDialog.setTitle(oBundle.getText("createSkill"));
             this.byId("skillFormName").setValue("");
             this.byId("skillFormName").setValueState("None");
             this.byId("skillFormDescription").setValue("");
-            oDialog.open();
+            this._oSkillDialog.open();
         },
 
         onEditSkill: async function (oEvent) {
-            const oContext = oEvent.getSource().getBindingContext();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oContext = oEvent.getSource().getBindingContext();
+
             if (!oContext) {
                 return;
             }
 
-            const oDialog = await this._loadSkillDialog();
-            const oSkill = oContext.getObject();
+            if (!this._oSkillDialog) {
+                this._oSkillDialog = await this.loadFragment({
+                    name: "companymanagement.view.SkillFormDialog"
+                });
+            }
 
-            this._sEditSkillPath = oContext.getPath();   
+            var oSkill = oContext.getObject();
+            this._sEditSkillPath = oContext.getPath();
 
-            oDialog.setTitle(this.getResourceBundle().getText("editSkill"));
+            this._oSkillDialog.setTitle(oBundle.getText("editSkill"));
             this.byId("skillFormName").setValue(oSkill.name || "");
             this.byId("skillFormName").setValueState("None");
             this.byId("skillFormDescription").setValue(oSkill.description || "");
-            oDialog.open();
+            this._oSkillDialog.open();
         },
 
         onSaveSkill: function () {
-            const oModel = this.getODataModel();
-            const oBundle = this.getResourceBundle();
-            const oNameInput = this.byId("skillFormName");
-            const sName = oNameInput.getValue().trim();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var oNameInput = this.byId("skillFormName");
+            var sName = oNameInput.getValue().trim();
 
             if (!sName) {
                 oNameInput.setValueState("Error");
@@ -88,35 +105,40 @@ sap.ui.define([
             }
             oNameInput.setValueState("None");
 
-            const oSkill = {
+            var oSkill = {
                 name: sName,
                 description: this.byId("skillFormDescription").getValue().trim()
             };
 
-            const fnAfterSave = () => {
-                oModel.refresh(true);
-                this._oSkillDialog.close();
-            };
-
-          // same object 2 outcomes
             if (this._sEditSkillPath) {
-                oModel.update(this._sEditSkillPath, oSkill,
-                    this.crudCallbacks("msgSkillMasterUpdated", "msgSkillMasterUpdateError", fnAfterSave));
+                oModel.update(this._sEditSkillPath, oSkill, {
+                    success: () => {
+                        MessageToast.show(oBundle.getText("msgSkillMasterUpdated"));
+                        oModel.refresh(true);
+                        this._oSkillDialog.close();
+                    },
+                    error: () => MessageToast.show(oBundle.getText("msgSkillMasterUpdateError"))
+                });
                 return;
             }
 
-            oModel.create("/Skills", oSkill,
-                this.crudCallbacks("msgSkillMasterAdded", "msgSkillMasterAddError", fnAfterSave));
+            oModel.create("/Skills", oSkill, {
+                success: () => {
+                    MessageToast.show(oBundle.getText("msgSkillMasterAdded"));
+                    oModel.refresh(true);
+                    this._oSkillDialog.close();
+                },
+                error: () => MessageToast.show(oBundle.getText("msgSkillMasterAddError"))
+            });
         },
 
         onDeleteSkill: function (oEvent) {
-            const oModel = this.getODataModel();
-            const oBundle = this.getResourceBundle();
-            const oContext = oEvent.getSource().getBindingContext();
-            const sPath = oContext.getPath();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var oContext = oEvent.getSource().getBindingContext();
+            var sPath = oContext.getPath();
 
-            // usageCount vine deja calculat din serviciu, nu mai citim EmployeeSkills
-            const iUsed = oContext.getProperty("usageCount") || 0;
+            var iUsed = oContext.getProperty("usageCount") || 0;
 
             if (iUsed > 0) {
                 MessageBox.error(oBundle.getText("msgSkillInUse", [iUsed]));
@@ -126,14 +148,20 @@ sap.ui.define([
             MessageBox.confirm(oBundle.getText("msgConfirmDeleteSkillMaster"), {
                 title: oBundle.getText("msgConfirmDeleteTitle"),
                 actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
-                onClose: (oAction) => {
+                onClose: function (oAction) {
                     if (oAction !== MessageBox.Action.OK) {
                         return;
                     }
 
-                    oModel.remove(sPath,
-                        this.crudCallbacks("msgSkillMasterDeleted", "msgSkillMasterDeleteError",
-                            () => oModel.refresh(true)));
+                    oModel.remove(sPath, {
+                        success: function () {
+                            MessageToast.show(oBundle.getText("msgSkillMasterDeleted"));
+                            oModel.refresh(true);
+                        },
+                        error: function () {
+                            MessageToast.show(oBundle.getText("msgSkillMasterDeleteError"));
+                        }
+                    });
                 }
             });
         },
@@ -142,52 +170,55 @@ sap.ui.define([
             this._oSkillDialog.close();
         },
 
-        _loadSkillDialog: async function () {
-            if (!this._oSkillDialog) {
-                this._oSkillDialog = await this.loadFragment({
-                    name: "companymanagement.view.SkillFormDialog"
-                });
-            }
-            return this._oSkillDialog;
-        },
-
-       //departments
+        // DEPARTMENTS
 
         onAddDepartment: async function () {
-            const oDialog = await this._loadDepartmentDialog();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            if (!this._oDepartmentDialog) {
+                this._oDepartmentDialog = await this.loadFragment({
+                    name: "companymanagement.view.DepartmentFormDialog"
+                });
+            }
 
             this._sEditDepartmentPath = null;
 
-            oDialog.setTitle(this.getResourceBundle().getText("createDepartment"));
+            this._oDepartmentDialog.setTitle(oBundle.getText("createDepartment"));
             this.byId("departmentFormName").setValue("");
             this.byId("departmentFormName").setValueState("None");
             this.byId("departmentFormDescription").setValue("");
-            oDialog.open();
+            this._oDepartmentDialog.open();
         },
 
         onEditDepartment: async function (oEvent) {
-            const oContext = oEvent.getSource().getBindingContext();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oContext = oEvent.getSource().getBindingContext();
+
             if (!oContext) {
                 return;
             }
 
-            const oDialog = await this._loadDepartmentDialog();
-            const oDepartment = oContext.getObject();
+            if (!this._oDepartmentDialog) {
+                this._oDepartmentDialog = await this.loadFragment({
+                    name: "companymanagement.view.DepartmentFormDialog"
+                });
+            }
 
+            var oDepartment = oContext.getObject();
             this._sEditDepartmentPath = oContext.getPath();
 
-            oDialog.setTitle(this.getResourceBundle().getText("editDepartment"));
+            this._oDepartmentDialog.setTitle(oBundle.getText("editDepartment"));
             this.byId("departmentFormName").setValue(oDepartment.name || "");
             this.byId("departmentFormName").setValueState("None");
             this.byId("departmentFormDescription").setValue(oDepartment.description || "");
-            oDialog.open();
+            this._oDepartmentDialog.open();
         },
 
         onSaveDepartment: function () {
-            const oModel = this.getODataModel();
-            const oBundle = this.getResourceBundle();
-            const oNameInput = this.byId("departmentFormName");
-            const sName = oNameInput.getValue().trim();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var oNameInput = this.byId("departmentFormName");
+            var sName = oNameInput.getValue().trim();
 
             if (!sName) {
                 oNameInput.setValueState("Error");
@@ -196,52 +227,64 @@ sap.ui.define([
             }
             oNameInput.setValueState("None");
 
-            const oDepartment = {
+            var oDepartment = {
                 name: sName,
                 description: this.byId("departmentFormDescription").getValue().trim()
             };
 
-            const fnAfterSave = () => {
-                oModel.refresh(true);
-                this._oDepartmentDialog.close();
-            };
-
             if (this._sEditDepartmentPath) {
-                oModel.update(this._sEditDepartmentPath, oDepartment,
-                    this.crudCallbacks("msgDepartmentUpdated", "msgDepartmentUpdateError", fnAfterSave));
+                oModel.update(this._sEditDepartmentPath, oDepartment, {
+                    success: () => {
+                        MessageToast.show(oBundle.getText("msgDepartmentUpdated"));
+                        oModel.refresh(true);
+                        this._oDepartmentDialog.close();
+                    },
+                    error: () => MessageToast.show(oBundle.getText("msgDepartmentUpdateError"))
+                });
                 return;
             }
 
-            oModel.create("/Departments", oDepartment,
-                this.crudCallbacks("msgDepartmentAdded", "msgDepartmentAddError", fnAfterSave));
+            oModel.create("/Departments", oDepartment, {
+                success: () => {
+                    MessageToast.show(oBundle.getText("msgDepartmentAdded"));
+                    oModel.refresh(true);
+                    this._oDepartmentDialog.close();
+                },
+                error: () => MessageToast.show(oBundle.getText("msgDepartmentAddError"))
+            });
         },
 
         onDeleteDepartment: function (oEvent) {
-            const oModel = this.getODataModel();
-            const oBundle = this.getResourceBundle();
-            const oContext = oEvent.getSource().getBindingContext();
-            const sPath = oContext.getPath();
-            const sDepartmentId = oContext.getProperty("ID");
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oModel = this.getOwnerComponent().getModel();
+            var oContext = oEvent.getSource().getBindingContext();
+            var sPath = oContext.getPath();
 
             // cati angajati are departamentul, tot din usageCount
-            const iUsed = oContext.getProperty("usageCount") || 0;
+            var iUsed = oContext.getProperty("usageCount") || 0;
 
             if (iUsed > 0) {
-                this._openReassignDialog(sDepartmentId, iUsed);
+                this._openReassignDialog(oContext.getProperty("ID"), iUsed);
                 return;
             }
 
             MessageBox.confirm(oBundle.getText("msgConfirmDeleteDepartment"), {
                 title: oBundle.getText("msgConfirmDeleteTitle"),
                 actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
-                onClose: (oAction) => {
+                onClose: function (oAction) {
                     if (oAction !== MessageBox.Action.OK) {
                         return;
                     }
 
-                    oModel.remove(sPath,
-                        this.crudCallbacks("msgDepartmentDeleted", "msgDepartmentDeleteError",
-                            () => oModel.refresh(true)));
+                    oModel.remove(sPath, {
+                        success: function () {
+                            MessageToast.show(oBundle.getText("msgDepartmentDeleted"));
+                            oModel.refresh(true);
+                        },
+                        error: function () {
+                            MessageToast.show(oBundle.getText("msgDepartmentDeleteError"));
+                        }
+                    });
                 }
             });
         },
@@ -250,18 +293,11 @@ sap.ui.define([
             this._oDepartmentDialog.close();
         },
 
-        _loadDepartmentDialog: async function () {
-            if (!this._oDepartmentDialog) {
-                this._oDepartmentDialog = await this.loadFragment({
-                    name: "companymanagement.view.DepartmentFormDialog"
-                });
-            }
-            return this._oDepartmentDialog;
-        },
-
-        //reasign
+        // REASSIGN
 
         _openReassignDialog: async function (sDepartmentId, iCount) {
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
             if (!this._oReassignDialog) {
                 this._oReassignDialog = await this.loadFragment({
                     name: "companymanagement.view.ReassignDepartmentDialog"
@@ -272,7 +308,7 @@ sap.ui.define([
 
             this.getView().getModel("reassign").setProperty(
                 "/message",
-                this.getResourceBundle().getText("msgDepartmentInUse", [iCount])
+                oBundle.getText("msgDepartmentInUse", [iCount])
             );
 
             this.byId("reassignTarget").setSelectedKey("");
@@ -281,9 +317,9 @@ sap.ui.define([
         },
 
         onConfirmReassign: async function () {
-            const oBundle = this.getResourceBundle();
-            const oTarget = this.byId("reassignTarget");
-            const sToId = oTarget.getSelectedKey();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oTarget = this.byId("reassignTarget");
+            var sToId = oTarget.getSelectedKey();
 
             if (!sToId || sToId === this._sReassignFromId) {
                 oTarget.setValueState("Error");
@@ -292,17 +328,19 @@ sap.ui.define([
             }
             oTarget.setValueState("None");
 
+            var oModel = this.getOwnerComponent().getModel("v4");
+            var oBinding = oModel.bindContext("/reassignDepartment(...)");
+
+            oBinding.setParameter("fromID", this._sReassignFromId);
+            oBinding.setParameter("toID", sToId);
+
             try {
-                await this.callAction("reassignDepartment", {
-                    fromID: this._sReassignFromId,
-                    toID: sToId
-                });
+                await oBinding.execute();
 
                 MessageToast.show(oBundle.getText("msgDepartmentReassigned"));
-                this.getODataModel().refresh(true);
+                this.getOwnerComponent().getModel().refresh(true);
                 this._oReassignDialog.close();
             } catch (oError) {
-                console.error("Reassign failed:", oError);
                 MessageToast.show(oBundle.getText("msgDepartmentDeleteError"));
             }
         },
@@ -311,10 +349,12 @@ sap.ui.define([
             this._oReassignDialog.close();
         },
 
-        //merge skills
+        // MERGE SKILLS
 
         onMergeSkill: async function (oEvent) {
-            const oContext = oEvent.getSource().getBindingContext();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oContext = oEvent.getSource().getBindingContext();
+
             if (!oContext) {
                 return;
             }
@@ -329,7 +369,7 @@ sap.ui.define([
 
             this.getView().getModel("merge").setProperty(
                 "/message",
-                this.getResourceBundle().getText("msgMergeSkillInfo", [
+                oBundle.getText("msgMergeSkillInfo", [
                     oContext.getProperty("name"),
                     oContext.getProperty("usageCount") || 0
                 ])
@@ -341,9 +381,9 @@ sap.ui.define([
         },
 
         onConfirmMergeSkill: async function () {
-            const oBundle = this.getResourceBundle();
-            const oTarget = this.byId("mergeSkillTarget");
-            const sToId = oTarget.getSelectedKey();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var oTarget = this.byId("mergeSkillTarget");
+            var sToId = oTarget.getSelectedKey();
 
             if (!sToId || sToId === this._sMergeFromId) {
                 oTarget.setValueState("Error");
@@ -352,17 +392,19 @@ sap.ui.define([
             }
             oTarget.setValueState("None");
 
+            var oModel = this.getOwnerComponent().getModel("v4");
+            var oBinding = oModel.bindContext("/mergeSkills(...)");
+
+            oBinding.setParameter("fromID", this._sMergeFromId);
+            oBinding.setParameter("toID", sToId);
+
             try {
-                await this.callAction("mergeSkills", {
-                    fromID: this._sMergeFromId,
-                    toID: sToId
-                });
+                await oBinding.execute();
 
                 MessageToast.show(oBundle.getText("msgSkillsMerged"));
-                this.getODataModel().refresh(true);
+                this.getOwnerComponent().getModel().refresh(true);
                 this._oMergeSkillDialog.close();
             } catch (oError) {
-                console.error("Merge failed:", oError);
                 MessageToast.show(oBundle.getText("msgSkillsMergeError"));
             }
         },

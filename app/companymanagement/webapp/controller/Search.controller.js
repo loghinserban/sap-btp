@@ -1,259 +1,295 @@
 sap.ui.define([
-    "companymanagement/controller/BaseController",
-    "sap/ui/model/json/JSONModel",
+    "sap/ui/core/mvc/Controller",
+    "sap/ui/core/UIComponent",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
+    "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast"
-], (BaseController, JSONModel, Filter, FilterOperator, MessageToast) => {
+], function (Controller, UIComponent, Filter, FilterOperator, JSONModel, MessageToast) {
     "use strict";
 
-    const FRESHNESS_WEIGHT = {
-        Success: 1,
-        Warning: 0.7,
-        None: 0.5,
-        Error: 0.4
-    };
+    return Controller.extend("companymanagement.controller.Search", {
 
-    const FRESHNESS_ICON = {
-        Success: "sap-icon://message-success",
-        Warning: "sap-icon://message-warning",
-        Error: "sap-icon://message-error",
-        None: "sap-icon://question-mark"
-    };
-
-    const SEARCH_DELAY = 300;
-
-    return BaseController.extend("companymanagement.controller.Search", {
-
-        onInit() {
-            this.getView().setModel(new JSONModel({
+        onInit: function () {
+            var model = new JSONModel({
                 results: [],
                 busy: false,
                 searched: false,
                 hasPartial: false
-            }), "search");
+            });
+
+            this.getView().setModel(model, "search");
         },
 
-
-        onFilterChange() {
-            clearTimeout(this._iSearchTimer);
-            this._iSearchTimer = setTimeout(this.onSearch.bind(this), SEARCH_DELAY);
+        onFilterChange: function () {
+            clearTimeout(this.timer);
+            this.timer = setTimeout(this.onSearch.bind(this), 300);
         },
 
-        onSearch() {
-            clearTimeout(this._iSearchTimer);
+        onSearch: function () {
+            clearTimeout(this.timer);
 
-            const oSearchModel = this.getView().getModel("search");
-            const aWantedSkills = this._getWantedSkills();
-            const sQuery = this.byId("searchQuery").getValue().trim();
+            var bundle = this.getView().getModel("i18n").getResourceBundle();
+            var model = this.getOwnerComponent().getModel();
+            var searchModel = this.getView().getModel("search");
 
-            if (!aWantedSkills.length && !sQuery) {
-                oSearchModel.setData({ results: [], busy: false, searched: false, hasPartial: false });
+            var items = this.byId("searchSkills").getSelectedItems();
+            var wantedIds = [];
+            var wantedNames = [];
+
+            for (var i = 0; i < items.length; i++) {
+                wantedIds.push(items[i].getKey());
+                wantedNames.push(items[i].getText());
+            }
+
+            var query = this.byId("searchQuery").getValue().trim();
+
+            if (wantedIds.length === 0 && query === "") {
+                searchModel.setData({
+                    results: [],
+                    busy: false,
+                    searched: false,
+                    hasPartial: false
+                });
                 return;
             }
 
-            const iMinRating = parseInt(this.byId("searchMinRating").getSelectedKey(), 10);
-            const aFilters = [];
+            var filters = [];
 
+            if (wantedIds.length > 0) {
+                var skillFilters = [];
 
-            if (aWantedSkills.length) {
-                aFilters.push(new Filter({
-                    filters: aWantedSkills.map((oSkill) => new Filter("skill_ID", FilterOperator.EQ, oSkill.ID)),
-                    and: false
-                }));
+                for (var j = 0; j < wantedIds.length; j++) {
+                    skillFilters.push(new Filter("skill_ID", FilterOperator.EQ, wantedIds[j]));
+                }
+
+                filters.push(new Filter({ filters: skillFilters, and: false }));
             }
 
-            if (iMinRating > 1) {
-                aFilters.push(new Filter("rating", FilterOperator.GE, iMinRating));
+            var minRating = parseInt(this.byId("searchMinRating").getSelectedKey(), 10);
+
+            if (minRating > 1) {
+                filters.push(new Filter("rating", FilterOperator.GE, minRating));
             }
 
-            oSearchModel.setProperty("/busy", true);
+            searchModel.setProperty("/busy", true);
 
-            this.getODataModel().read("/EmployeeSkills", {
-                filters: aFilters,
+            model.read("/EmployeeSkills", {
+                filters: filters,
                 urlParameters: {
                     "$expand": "employee/department,skill"
                 },
-                success: (oData) => {
-                    this._buildResults(oData.results, aWantedSkills);
-                    oSearchModel.setProperty("/busy", false);
-                    oSearchModel.setProperty("/searched", true);
+                success: (data) => {
+                    this.buildResults(data.results, wantedIds, wantedNames);
+                    searchModel.setProperty("/busy", false);
+                    searchModel.setProperty("/searched", true);
                 },
-                error: (oError) => {
-                    console.error("Search failed:", oError);
-                    oSearchModel.setProperty("/results", []);
-                    oSearchModel.setProperty("/hasPartial", false);
-                    oSearchModel.setProperty("/busy", false);
-                    oSearchModel.setProperty("/searched", true);
-                    MessageToast.show(this.getResourceBundle().getText("msgSearchError"));
+                error: () => {
+                    searchModel.setProperty("/results", []);
+                    searchModel.setProperty("/hasPartial", false);
+                    searchModel.setProperty("/busy", false);
+                    searchModel.setProperty("/searched", true);
+                    MessageToast.show(bundle.getText("msgSearchError"));
                 }
             });
         },
 
-        _getWantedSkills() {
-            return this.byId("searchSkills").getSelectedItems().map((oItem) => ({
-                ID: oItem.getKey(),
-                name: oItem.getText()
-            }));
-        },
+        buildResults: function (rows, wantedIds, wantedNames) {
+            var bundle = this.getView().getModel("i18n").getResourceBundle();
 
-        _buildResults(aRows, aWantedSkills) {
-            const oBundle = this.getResourceBundle();
-            const iMaxMonths = parseInt(this.byId("searchFreshness").getSelectedKey(), 10);
-            const sDepartmentId = this.byId("searchDepartment").getSelectedKey();
-            const sQuery = this.byId("searchQuery").getValue().trim().toLowerCase();
-            const iMinExperience = parseInt(this.byId("searchMinExperience").getValue(), 10);
-            const iMinAge = parseInt(this.byId("searchMinAge").getValue(), 10);
-            const iMaxAge = parseInt(this.byId("searchMaxAge").getValue(), 10);
+            var maxMonths = parseInt(this.byId("searchFreshness").getSelectedKey(), 10);
+            var departmentId = this.byId("searchDepartment").getSelectedKey();
+            var query = this.byId("searchQuery").getValue().trim().toLowerCase();
+            var minExperience = parseInt(this.byId("searchMinExperience").getValue(), 10);
+            var minAge = parseInt(this.byId("searchMinAge").getValue(), 10);
+            var maxAge = parseInt(this.byId("searchMaxAge").getValue(), 10);
 
-            const mByEmployee = {};
+            var results = [];
+            var byEmployee = {};
 
-            aRows.forEach((oRow) => {
-                const oEmployee = oRow.employee;
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var employee = row.employee;
 
-                if (!oEmployee) {
-                    return;
+                if (!employee) {
+                    continue;
                 }
 
-                const iMonths = this.monthsSince(oRow.lastUsed);
+                var months = null;
 
-                // Un skill fara lastUsed nu poate dovedi ca e new
-                if (iMaxMonths && (iMonths === null || iMonths > iMaxMonths)) {
-                    return;
+                if (row.lastUsed) {
+                    months = Math.floor((new Date() - new Date(row.lastUsed)) / (1000 * 60 * 60 * 24 * 30.44));
                 }
 
-                if (sDepartmentId && oEmployee.department_ID !== sDepartmentId) {
-                    return;
+                if (maxMonths > 0 && (months === null || months > maxMonths)) {
+                    continue;
                 }
 
-                if (sQuery) {
-                    const sHaystack = `${oEmployee.firstName} ${oEmployee.lastName} ${oEmployee.email}`.toLowerCase();
-                    if (!sHaystack.includes(sQuery)) {
-                        return;
+                if (departmentId && employee.department_ID !== departmentId) {
+                    continue;
+                }
+
+                if (query) {
+                    var text = (employee.firstName + " " + employee.lastName + " " + employee.email).toLowerCase();
+
+                    if (text.indexOf(query) < 0) {
+                        continue;
                     }
                 }
 
-                if (!isNaN(iMinExperience) && (oEmployee.experience || 0) < iMinExperience) {
-                    return;
+                if (!isNaN(minExperience) && (employee.experience || 0) < minExperience) {
+                    continue;
                 }
 
-                const iAge = this.calculateAge(oEmployee.dateOfBirth);
+                var age = this.calculateAge(employee.dateOfBirth);
 
-                if (!isNaN(iMinAge) && (iAge === null || iAge < iMinAge)) {
-                    return;
+                if (!isNaN(minAge) && (age === null || age < minAge)) {
+                    continue;
                 }
-                if (!isNaN(iMaxAge) && (iAge === null || iAge > iMaxAge)) {
-                    return;
-                }
-
-                const oEntry = mByEmployee[oEmployee.ID] ??= {
-                    ID: oEmployee.ID,
-                    fullName: `${oEmployee.firstName} ${oEmployee.lastName}`,
-                    email: oEmployee.email,
-                    departmentName: oEmployee.department ? oEmployee.department.name : "",
-                    experience: oEmployee.experience,
-                    age: iAge,
-                    skillIds: [],
-                    skills: []
-                };
-
-                // Acelasi skill poate ajunge de doua ori pe un angajat, iar atunci
-                // acoperirea calculata mai jos ar iesi gresit.
-                if (oEntry.skillIds.includes(oRow.skill_ID)) {
-                    return;
+                if (!isNaN(maxAge) && (age === null || age > maxAge)) {
+                    continue;
                 }
 
-                const sFreshness = this.formatFreshness(oRow.lastUsed);
+                var entry = byEmployee[employee.ID];
 
-                oEntry.skillIds.push(oRow.skill_ID);
-                oEntry.skills.push({
-                    label: `${oRow.skill ? oRow.skill.name : ""} · ${oRow.rating}/5 · ${this._formatAge(iMonths)}`,
-                    freshness: sFreshness,
-                    icon: FRESHNESS_ICON[sFreshness],
-                    rating: oRow.rating,
-                    weight: FRESHNESS_WEIGHT[sFreshness]
+                if (!entry) {
+                    entry = {
+                        ID: employee.ID,
+                        fullName: employee.firstName + " " + employee.lastName,
+                        email: employee.email,
+                        departmentName: employee.department ? employee.department.name : "",
+                        experience: employee.experience,
+                        age: age,
+                        skillIds: [],
+                        skills: [],
+                        total: 0,
+                        worstRank: 0,
+                        worstFreshness: "Success"
+                    };
+
+                    byEmployee[employee.ID] = entry;
+                    results.push(entry);
+                }
+
+                if (entry.skillIds.indexOf(row.skill_ID) >= 0) {
+                    continue;
+                }
+
+                var state = "None";
+                var icon = "sap-icon://question-mark";
+                var weight = 0.5;
+                var rank = 1;
+                var when = bundle.getText("neverUsed");
+
+                if (months !== null) {
+                    if (months < 1) {
+                        when = bundle.getText("usedThisMonth");
+                    } else if (months < 12) {
+                        when = bundle.getText("usedMonthsAgo", [months]);
+                    } else {
+                        when = bundle.getText("usedYearsAgo", [Math.floor(months / 12)]);
+                    }
+
+                    if (months <= 12) {
+                        state = "Success";
+                        icon = "sap-icon://message-success";
+                        weight = 1;
+                        rank = 0;
+                    } else if (months <= 24) {
+                        state = "Warning";
+                        icon = "sap-icon://message-warning";
+                        weight = 0.7;
+                        rank = 2;
+                    } else {
+                        state = "Error";
+                        icon = "sap-icon://message-error";
+                        weight = 0.4;
+                        rank = 3;
+                    }
+                }
+
+                var skillName = row.skill ? row.skill.name : "";
+
+                entry.skillIds.push(row.skill_ID);
+                entry.skills.push({
+                    label: skillName + " · " + row.rating + "/5 · " + when,
+                    freshness: state,
+                    icon: icon,
+                    rating: row.rating,
+                    weight: weight
                 });
-            });
 
-            const aResults = Object.values(mByEmployee);
+                entry.total = entry.total + row.rating * weight;
 
-            aResults.forEach((oEntry) => {
-                oEntry.score = this._calculateScore(oEntry.skills);
-                oEntry.worstFreshness = this._worstFreshness(oEntry.skills);
-                oEntry.matched = oEntry.skills.length;
+                if (rank > entry.worstRank) {
+                    entry.worstRank = rank;
+                    entry.worstFreshness = state;
+                }
+            }
 
-                if (aWantedSkills.length) {
-                    // Un search care intoarce zero rezultate nu ajuta pe nimeni. Aratam si
-                    // potrivirile partiale, dar spunem raspicat ce lipseste si le tinem sub
-                    // cele complete
-                    aWantedSkills
-                        .filter((oSkill) => !oEntry.skillIds.includes(oSkill.ID))
-                        .forEach((oSkill) => {
-                            oEntry.skills.push({
-                                label: oBundle.getText("skillMissing", [oSkill.name]),
+            var hasPartial = false;
+
+            for (var k = 0; k < results.length; k++) {
+                var result = results[k];
+
+                result.matched = result.skills.length;
+                result.score = Math.round(result.total / result.matched / 5 * 100);
+
+                if (wantedIds.length === 0) {
+                    result.coverageText = bundle.getText("coverageSkills", [result.matched]);
+                } else {
+                    for (var m = 0; m < wantedIds.length; m++) {
+                        if (result.skillIds.indexOf(wantedIds[m]) < 0) {
+                            result.skills.push({
+                                label: bundle.getText("skillMissing", [wantedNames[m]]),
                                 freshness: "None",
                                 icon: "sap-icon://less",
                                 rating: 0,
                                 weight: 0
                             });
-                        });
+                        }
+                    }
 
-                    oEntry.coverageText = oBundle.getText("coverage", [oEntry.matched, aWantedSkills.length]);
-                } else {
-                    oEntry.coverageText = oBundle.getText("coverageSkills", [oEntry.matched]);
+                    result.coverageText = bundle.getText("coverage", [result.matched, wantedIds.length]);
                 }
+
+                if (wantedIds.length > 1 && result.matched < wantedIds.length) {
+                    hasPartial = true;
+                }
+            }
+
+            results.sort(function (a, b) {
+                if (b.matched !== a.matched) {
+                    return b.matched - a.matched;
+                }
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
+                return (b.experience || 0) - (a.experience || 0);
             });
 
-
-            aResults.sort((oLeft, oRight) =>
-                oRight.matched - oLeft.matched ||
-                oRight.score - oLeft.score ||
-                (oRight.experience || 0) - (oLeft.experience || 0)
-            );
-
-            this.getView().getModel("search").setProperty("/results", aResults);
-            this.getView().getModel("search").setProperty(
-                "/hasPartial",
-                aWantedSkills.length > 1 && aResults.some((oEntry) => oEntry.matched < aWantedSkills.length)
-            );
+            this.getView().getModel("search").setProperty("/results", results);
+            this.getView().getModel("search").setProperty("/hasPartial", hasPartial);
         },
 
-        _formatAge(iMonths) {
-            const oBundle = this.getResourceBundle();
-
-            if (iMonths === null) {
-                return oBundle.getText("neverUsed");
-            }
-            if (iMonths < 1) {
-                return oBundle.getText("usedThisMonth");
-            }
-            if (iMonths < 12) {
-                return oBundle.getText("usedMonthsAgo", [iMonths]);
+        calculateAge: function (dateOfBirth) {
+            if (!dateOfBirth) {
+                return null;
             }
 
-            return oBundle.getText("usedYearsAgo", [Math.floor(iMonths / 12)]);
+            var birth = new Date(dateOfBirth);
+            var today = new Date();
+            var age = today.getFullYear() - birth.getFullYear();
+            var monthDiff = today.getMonth() - birth.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age = age - 1;
+            }
+
+            return age;
         },
 
-        _calculateScore(aSkills) {
-            const fTotal = aSkills.reduce(
-                (fSum, oSkill) => fSum + oSkill.rating * oSkill.weight,
-                0
-            );
-
-            return Math.round((fTotal / aSkills.length / 5) * 100);
-        },
-
-        _worstFreshness(aSkills) {
-            const aOrder = ["Success", "None", "Warning", "Error"];
-
-            return aSkills.reduce(
-                (sWorst, oSkill) =>
-                    aOrder.indexOf(oSkill.freshness) > aOrder.indexOf(sWorst) ? oSkill.freshness : sWorst,
-                "Success"
-            );
-        },
-
-        onClearFilters() {
+        onClearFilters: function () {
             this.byId("searchSkills").setSelectedKeys([]);
             this.byId("searchMinRating").setSelectedKey("1");
             this.byId("searchFreshness").setSelectedKey("0");
@@ -271,20 +307,21 @@ sap.ui.define([
             });
         },
 
-        onResultPress(oEvent) {
-            const oItem = oEvent.getParameter("listItem");
-            const oContext = oItem && oItem.getBindingContext("search");
+        onResultPress: function (oEvent) {
+            var item = oEvent.getParameter("listItem");
+            var context = item.getBindingContext("search");
 
-            if (!oContext) {
+            if (!context) {
                 return;
             }
             oEvent.getSource().removeSelections(true);
 
-            this.getRouter().navTo("RouteDetail", { param: oContext.getProperty("ID") });
+            UIComponent.getRouterFor(this).navTo("RouteDetail", { param: context.getProperty("ID") });
         },
 
-        onNavBack() {
-            this.getRouter().navTo("RouteView", {}, true);
+        onNavBack: function () {
+            UIComponent.getRouterFor(this).navTo("RouteView", {}, true);
         }
+
     });
 });
