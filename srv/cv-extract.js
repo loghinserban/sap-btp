@@ -70,14 +70,12 @@ async function extractCvProfile(options) {
     const contentBase64 = options.contentBase64;
     const catalog = options.catalog || [];
 
-    const response = await client.beta.messages.create({
-        model: 'claude-opus-5',
+    const response = await client.messages.create({
+        model: 'claude-sonnet-5',
         max_tokens: 16000,
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
         system: SYSTEM + '\n\nSkill catalog (ID<TAB>name):\n' + buildCatalogText(catalog),
         output_config: {
-            effort: 'medium',
+            effort: 'low',
             format: { type: 'json_schema', schema: CV_SCHEMA }
         },
         messages: [{

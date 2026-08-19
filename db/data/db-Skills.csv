@@ -4,3 +4,42 @@ ID,name,description
 00000000-0000-0000-0000-000000000103,SAP UI5,SAP UI5 Framework
 00000000-0000-0000-0000-000000000104,CAP,SAP Cloud Application Programming Model
 00000000-0000-0000-0000-000000000105,HANA,SAP HANA Database
+00000000-0000-0000-0000-000000000106,SAP BTP Administration,BTP cockpit subaccounts entitlements and quota management
+00000000-0000-0000-0000-000000000107,SAP Integration Suite,Cloud Integration API Management and iFlow development
+00000000-0000-0000-0000-000000000108,SAP Event Mesh,Event driven messaging and queues on SAP BTP
+00000000-0000-0000-0000-000000000109,SAP HANA Cloud,HANA Cloud modelling HDI containers and performance tuning
+00000000-0000-0000-0000-000000000110,SAP Fiori Elements,Annotation driven Fiori Elements applications
+00000000-0000-0000-0000-000000000111,SAP Build Process Automation,Workflow and robotic process automation with SAP Build
+00000000-0000-0000-0000-000000000112,SAP Business Application Studio,Cloud development environment for SAP BTP projects
+00000000-0000-0000-0000-000000000113,XSUAA and Identity Services,Authentication authorization and role collections on BTP
+00000000-0000-0000-0000-000000000114,SAP Destination Service,Destinations connectivity and Cloud Connector setup
+00000000-0000-0000-0000-000000000115,SAP Datasphere,Data warehousing federation and modelling on SAP BTP
+00000000-0000-0000-0000-000000000116,SAP Analytics Cloud,Analytics stories dashboards and planning models
+00000000-0000-0000-0000-000000000117,ABAP RAP,ABAP RESTful Application Programming Model
+00000000-0000-0000-0000-000000000118,ABAP Cloud,Clean core ABAP development for the cloud
+00000000-0000-0000-0000-000000000119,SAP S/4HANA,S/4HANA functional and technical process knowledge
+00000000-0000-0000-0000-000000000120,Core Data Services,CDS modelling annotations and projections
+00000000-0000-0000-0000-000000000121,OData,OData V2 and V4 service design and consumption
+00000000-0000-0000-0000-000000000122,Cloud Foundry,Cloud Foundry runtime buildpacks and service bindings
+00000000-0000-0000-0000-000000000123,MTA Deployment,Multi target application build and deployment
+00000000-0000-0000-0000-000000000124,SAP Cloud Transport Management,Transport landscapes and release automation
+00000000-0000-0000-0000-000000000125,Java,Enterprise Java development
+00000000-0000-0000-0000-000000000126,Spring Boot,Spring Boot microservices and REST services
+00000000-0000-0000-0000-000000000127,Node.js,Server side JavaScript with Node.js
+00000000-0000-0000-0000-000000000128,Python,Python scripting and data processing
+00000000-0000-0000-0000-000000000129,Kubernetes,Container orchestration and Kyma runtime
+00000000-0000-0000-0000-000000000130,Docker,Container images and local container workflows
+00000000-0000-0000-0000-000000000131,Apache Kafka,Event streaming and message brokers
+00000000-0000-0000-0000-000000000132,PostgreSQL,Relational database design and administration
+00000000-0000-0000-0000-000000000133,SQL,SQL querying and performance analysis
+00000000-0000-0000-0000-000000000134,REST API Design,API design versioning and documentation
+00000000-0000-0000-0000-000000000135,Microservices Architecture,Service decomposition and distributed system patterns
+00000000-0000-0000-0000-000000000136,CI/CD Pipelines,Build test and release automation pipelines
+00000000-0000-0000-0000-000000000137,Git,Version control branching and code review
+00000000-0000-0000-0000-000000000138,Microsoft Azure,Azure cloud services and hybrid integration
+00000000-0000-0000-0000-000000000139,Terraform,Infrastructure as code provisioning
+00000000-0000-0000-0000-000000000140,OAuth 2.0 and SAML,Federated identity tokens and single sign on
+00000000-0000-0000-0000-000000000141,Enterprise Architecture,Solution architecture and landscape design
+00000000-0000-0000-0000-000000000142,Agile and SAFe,Agile delivery and scaled framework practices
+00000000-0000-0000-0000-000000000143,SAP SuccessFactors,SuccessFactors HR processes and integrations
+00000000-0000-0000-0000-000000000144,SAP Ariba,Procurement and supplier processes on SAP Ariba

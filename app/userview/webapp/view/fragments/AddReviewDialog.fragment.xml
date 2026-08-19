@@ -3,7 +3,7 @@
     <content>
       <VBox class="sapUiSmallMargin">
         <Label text="Colleague" />
-        <ComboBox id="cbReviewEmployee" width="100%" items="{/Employees}">
+        <ComboBox id="cbReviewEmployee" width="100%" items="{ path: '/Employees', length: 1000, sorter: { path: 'lastName' } }">
           <items>
             <core:Item key="{ID}" text="{firstName} {lastName} ({email})"/>
           </items>

@@ -119,7 +119,13 @@ sap.ui.define([
 
         onRequiredFieldLiveChange: function (oEvent) {
             var oField = oEvent.getSource();
-            var sValue = oField.getSelectedKey ? oField.getSelectedKey() : oField.getValue().trim();
+            var sValue;
+
+            if (oField.isA("sap.m.ComboBox")) {
+                sValue = oField.getSelectedKey();
+            } else {
+                sValue = oField.getValue().trim();
+            }
 
             oField.setValueState(sValue ? "None" : "Error");
         },

@@ -38,3 +38,5 @@ PASUL_0_SEED.md
 app/companymanagement/dist/
 app/userview/dist/
 app/companymanagement/package-lock.json
+db/.env
+db/.env

@@ -4,3 +4,10 @@ ID,name,description
 00000000-0000-0000-0000-000000000003,HR,Human Resources
 00000000-0000-0000-0000-000000000004,Finance,Finance and Accounting
 00000000-0000-0000-0000-000000000005,Marketing,Marketing and Communications
+00000000-0000-0000-0000-000000000006,SAP Basis and Operations,SAP landscape operations and system administration
+00000000-0000-0000-0000-000000000007,Cloud Platform Engineering,SAP BTP platform engineering and DevOps
+00000000-0000-0000-0000-000000000008,Integration,Enterprise integration APIs and middleware
+00000000-0000-0000-0000-000000000009,Data and Analytics,Data engineering warehousing and business intelligence
+00000000-0000-0000-0000-000000000010,Quality Assurance,Test automation and release validation
+00000000-0000-0000-0000-000000000011,IT Security,Application security and identity management
+00000000-0000-0000-0000-000000000012,Consulting,Customer facing SAP implementation and advisory

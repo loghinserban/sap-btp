@@ -17,6 +17,40 @@ function randomPastDate() {
   return date.toISOString().slice(0, 10);
 }
 
+const departmentSkillPools = {
+  'Engineering': ['JavaScript', 'TypeScript', 'SAP UI5', 'CAP', 'SAP Fiori Elements', 'SAP Business Application Studio', 'Core Data Services', 'OData', 'Node.js', 'Java', 'Spring Boot', 'Git', 'REST API Design', 'Microservices Architecture', 'ABAP RAP', 'ABAP Cloud'],
+  'Sales': ['SAP S/4HANA', 'SAP Analytics Cloud', 'Agile and SAFe', 'Enterprise Architecture', 'SAP Ariba'],
+  'HR': ['SAP SuccessFactors', 'Agile and SAFe', 'SQL', 'SAP Analytics Cloud'],
+  'Finance': ['SAP S/4HANA', 'SAP Analytics Cloud', 'SQL', 'SAP Datasphere', 'SAP Ariba'],
+  'Marketing': ['SAP Analytics Cloud', 'SQL', 'Agile and SAFe', 'JavaScript'],
+  'SAP Basis and Operations': ['SAP BTP Administration', 'Cloud Foundry', 'MTA Deployment', 'SAP Cloud Transport Management', 'SAP Destination Service', 'SAP HANA Cloud', 'HANA', 'Kubernetes', 'Docker'],
+  'Cloud Platform Engineering': ['SAP BTP Administration', 'Cloud Foundry', 'MTA Deployment', 'Kubernetes', 'Docker', 'Terraform', 'CI/CD Pipelines', 'Git', 'Microsoft Azure', 'SAP Business Application Studio'],
+  'Integration': ['SAP Integration Suite', 'SAP Event Mesh', 'SAP Destination Service', 'OData', 'Apache Kafka', 'REST API Design', 'SAP Build Process Automation'],
+  'Data and Analytics': ['SAP Datasphere', 'SAP Analytics Cloud', 'SAP HANA Cloud', 'HANA', 'PostgreSQL', 'SQL', 'Python', 'Apache Kafka'],
+  'Quality Assurance': ['CI/CD Pipelines', 'Git', 'Python', 'JavaScript', 'TypeScript', 'REST API Design', 'Agile and SAFe'],
+  'IT Security': ['XSUAA and Identity Services', 'OAuth 2.0 and SAML', 'SAP Destination Service', 'Kubernetes', 'Enterprise Architecture'],
+  'Consulting': ['SAP S/4HANA', 'CAP', 'SAP UI5', 'SAP Integration Suite', 'Enterprise Architecture', 'Agile and SAFe', 'SAP Analytics Cloud', 'ABAP RAP']
+};
+
+function skillPoolFor(departmentName, skills) {
+  const names = departmentSkillPools[departmentName];
+  if (!names) {
+    return skills;
+  }
+
+  const pool = [];
+  for (const skill of skills) {
+    if (names.indexOf(skill.name) !== -1) {
+      pool.push(skill);
+    }
+  }
+
+  if (pool.length < 4) {
+    return skills;
+  }
+  return pool;
+}
+
 function clampRating(value) {
   let rating = parseInt(value, 10);
   if (!rating) {
@@ -238,14 +272,15 @@ module.exports = (srv) => {
     const body = await response.json();
     const people = body.results;
 
-    const departments = await SELECT.from(Departments).columns('ID');
-    const skills = await SELECT.from(Skills).columns('ID');
+    const departments = await SELECT.from(Departments).columns('ID', 'name');
+    const skills = await SELECT.from(Skills).columns('ID', 'name');
 
     const employees = [];
     const employeeSkills = [];
 
     for (const person of people) {
       const employeeID = cds.utils.uuid();
+      const department = departments[randomInt(departments.length)];
 
       employees.push({
         ID: employeeID,
@@ -254,14 +289,15 @@ module.exports = (srv) => {
         email: person.email,
         dateOfBirth: person.dob.date.slice(0, 10),
         experience: randomInt(15) + 1,
-        department_ID: departments[randomInt(departments.length)].ID
+        department_ID: department.ID
       });
 
-      const howMany = 2 + randomInt(3);
+      const pool = skillPoolFor(department.name, skills);
+      const howMany = 4 + randomInt(4);
       const chosen = [];
 
-      while (chosen.length < howMany && chosen.length < skills.length) {
-        const skill = skills[randomInt(skills.length)];
+      while (chosen.length < howMany && chosen.length < pool.length) {
+        const skill = pool[randomInt(pool.length)];
         if (chosen.indexOf(skill.ID) !== -1) {
           continue;
         }
@@ -274,6 +310,19 @@ module.exports = (srv) => {
           rating: randomInt(5) + 1,
           lastUsed: randomPastDate()
         });
+      }
+
+      if (randomInt(3) === 0) {
+        const extra = skills[randomInt(skills.length)];
+        if (chosen.indexOf(extra.ID) === -1) {
+          employeeSkills.push({
+            ID: cds.utils.uuid(),
+            employee_ID: employeeID,
+            skill_ID: extra.ID,
+            rating: randomInt(5) + 1,
+            lastUsed: randomPastDate()
+          });
+        }
       }
     }
 
