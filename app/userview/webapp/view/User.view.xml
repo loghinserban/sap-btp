@@ -83,9 +83,10 @@
 
                     <Table
                         id="usersTable"
-                        items="{path:'/Employees'}"
+                        items="{users>/rows}"
                         mode="None"
                         class="sapUiSmallMarginTop"
+                        noDataText="No employees found"
                     >
                         <columns>
                             <Column><Text text="First Name" /></Column>
@@ -97,13 +98,13 @@
                         <items>
                             <ColumnListItem type="Navigation" press=".onUserPress">
                                 <cells>
-                                    <Text text="{firstName}" />
-                                    <Text text="{lastName}" />
-                                    <Text text="{email}" />
-                                    <Text text="{experience}" />
+                                    <Text text="{users>firstName}" />
+                                    <Text text="{users>lastName}" />
+                                    <Text text="{users>email}" />
+                                    <Text text="{users>experience}" />
                                     <Text
                                         text="{
-                                          path: 'dateOfBirth',
+                                          path: 'users>dateOfBirth',
                                           type: 'sap.ui.model.type.Date',
                                           formatOptions: { pattern: 'yyyy-MM-dd', UTC: false }
                                         }"
@@ -112,6 +113,40 @@
                             </ColumnListItem>
                         </items>
                     </Table>
+
+                    <Toolbar id="usersPager">
+                        <Label id="lblPageSize" text="Rows per page" labelFor="selPageSize" />
+                        <Select
+                            id="selPageSize"
+                            selectedKey="{users>/pageSize}"
+                            change=".onPageSizeChange"
+                            autoAdjustWidth="true"
+                        >
+                            <core:Item id="itmPageSize5" key="5" text="5" />
+                            <core:Item id="itmPageSize10" key="10" text="10" />
+                            <core:Item id="itmPageSize20" key="20" text="20" />
+                            <core:Item id="itmPageSize50" key="50" text="50" />
+                        </Select>
+                        <ToolbarSpacer id="pagerSpacerLeft" />
+                        <Button
+                            id="btnPreviousPage"
+                            icon="sap-icon://navigation-left-arrow"
+                            text="Previous"
+                            enabled="{users>/hasPrev}"
+                            press=".onPreviousPage"
+                        />
+                        <Text id="txtPageIndicator" text="Page {users>/page} of {users>/pageCount}" />
+                        <Button
+                            id="btnNextPage"
+                            icon="sap-icon://navigation-right-arrow"
+                            iconFirst="false"
+                            text="Next"
+                            enabled="{users>/hasNext}"
+                            press=".onNextPage"
+                        />
+                        <ToolbarSpacer id="pagerSpacerRight" />
+                        <Text id="txtUserTotal" text="{users>/total} employees" />
+                    </Toolbar>
                 </VBox>
             </VBox>
         </content>

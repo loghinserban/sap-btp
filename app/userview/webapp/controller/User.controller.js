@@ -62,6 +62,18 @@ sap.ui.define([
             // Holds the skills read out of an uploaded CV until the user confirms them.
             this.getView().setModel(new JSONModel({ hasResults: false, skills: [] }), "cv");
 
+            var oUsersModel = new JSONModel({
+                rows: [],
+                query: "",
+                page: 1,
+                pageSize: 10,
+                pageCount: 1,
+                total: 0,
+                hasPrev: false,
+                hasNext: false
+            });
+            this.getView().setModel(oUsersModel, "users");
+
             var oModel = this._getModel();
             if (!oModel) {
                 MessageBox.error("OData model not initialized.");
@@ -69,7 +81,18 @@ sap.ui.define([
             }
 
             // createKey() and typed filters need the metadata, so wait for it instead of guessing a timeout.
-            oModel.metadataLoaded().then(this._loadCurrentUserData.bind(this));
+            var that = this;
+            oModel.metadataLoaded().then(function () {
+                that._loadCurrentUserData();
+                that._loadUsersPage();
+            });
+        },
+
+        onExit: function () {
+            if (this._iSearchTimer) {
+                clearTimeout(this._iSearchTimer);
+                this._iSearchTimer = null;
+            }
         },
 
         _getModel: function () {
@@ -171,29 +194,126 @@ sap.ui.define([
             // return DEFAULT_EMPLOYEE_ID;
         },
 
-        onUserSearch: function (oEvent) {
-            var sQuery = oEvent.getParameter("newValue") || oEvent.getParameter("query") || "";
+        // The employee list is paged server side with $skip/$top, so the landing page
+        // shows one page at a time instead of one long scrollable list.
+        _loadUsersPage: function () {
+            var oModel = this._getModel();
+            var oUsers = this.getView().getModel("users");
             var oTable = this.byId("usersTable");
-            var oBinding = oTable && oTable.getBinding("items");
-            if (!oBinding) return;
 
-            if (!sQuery) {
-                oBinding.filter([]);
-                return;
+            if (!oModel || !oUsers) return;
+
+            var iPageSize = parseInt(oUsers.getProperty("/pageSize"), 10) || 10;
+            var iPage = parseInt(oUsers.getProperty("/page"), 10) || 1;
+            var sQuery = oUsers.getProperty("/query") || "";
+            var aFilters = [];
+            var that = this;
+
+            if (sQuery) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("firstName", FilterOperator.Contains, sQuery),
+                        new Filter("lastName", FilterOperator.Contains, sQuery),
+                        new Filter("email", FilterOperator.Contains, sQuery)
+                    ],
+                    and: false
+                }));
             }
 
-            oBinding.filter(new Filter({
-                filters: [
-                    new Filter("firstName", FilterOperator.Contains, sQuery),
-                    new Filter("lastName", FilterOperator.Contains, sQuery),
-                    new Filter("email", FilterOperator.Contains, sQuery)
-                ],
-                and: false
-            }));
+            if (oTable) oTable.setBusy(true);
+
+            oModel.read("/Employees", {
+                filters: aFilters,
+                urlParameters: {
+                    "$skip": (iPage - 1) * iPageSize,
+                    "$top": iPageSize,
+                    // Paging over an unordered collection can repeat or skip rows between pages.
+                    "$orderby": "lastName,firstName",
+                    "$inlinecount": "allpages"
+                },
+                success: function (oData) {
+                    if (oTable) oTable.setBusy(false);
+
+                    var aRows = (oData && oData.results) || [];
+                    var iTotal = parseInt(oData && oData.__count, 10);
+                    if (isNaN(iTotal)) {
+                        iTotal = (iPage - 1) * iPageSize + aRows.length;
+                    }
+
+                    var iPageCount = Math.ceil(iTotal / iPageSize);
+                    if (iPageCount < 1) iPageCount = 1;
+
+                    // A shorter result set (filter, deletion) can leave us past the last page.
+                    if (iPage > iPageCount) {
+                        oUsers.setProperty("/page", iPageCount);
+                        that._loadUsersPage();
+                        return;
+                    }
+
+                    oUsers.setProperty("/rows", aRows);
+                    oUsers.setProperty("/total", iTotal);
+                    oUsers.setProperty("/pageCount", iPageCount);
+                    oUsers.setProperty("/hasPrev", iPage > 1);
+                    oUsers.setProperty("/hasNext", iPage < iPageCount);
+                },
+                error: function (oErr) {
+                    if (oTable) oTable.setBusy(false);
+                    console.error("Load employees page error:", oErr);
+                    MessageBox.error("Could not load the employee list: " + that._extractError(oErr));
+                }
+            });
+        },
+
+        onUserSearch: function (oEvent) {
+            var sQuery = oEvent.getParameter("newValue");
+            if (sQuery === undefined || sQuery === null) {
+                sQuery = oEvent.getParameter("query") || "";
+            }
+
+            var oUsers = this.getView().getModel("users");
+            oUsers.setProperty("/query", sQuery);
+            oUsers.setProperty("/page", 1);
+
+            // liveChange fires per keystroke; wait for a pause instead of one request per letter.
+            var that = this;
+            if (this._iSearchTimer) {
+                clearTimeout(this._iSearchTimer);
+            }
+            this._iSearchTimer = setTimeout(function () {
+                that._iSearchTimer = null;
+                that._loadUsersPage();
+            }, 400);
+        },
+
+        onPreviousPage: function () {
+            var oUsers = this.getView().getModel("users");
+            var iPage = parseInt(oUsers.getProperty("/page"), 10) || 1;
+            if (iPage <= 1) return;
+
+            oUsers.setProperty("/page", iPage - 1);
+            this._loadUsersPage();
+        },
+
+        onNextPage: function () {
+            var oUsers = this.getView().getModel("users");
+            var iPage = parseInt(oUsers.getProperty("/page"), 10) || 1;
+            if (iPage >= (parseInt(oUsers.getProperty("/pageCount"), 10) || 1)) return;
+
+            oUsers.setProperty("/page", iPage + 1);
+            this._loadUsersPage();
+        },
+
+        onPageSizeChange: function (oEvent) {
+            var iPageSize = parseInt(oEvent.getSource().getSelectedKey(), 10) || 10;
+            var oUsers = this.getView().getModel("users");
+
+            oUsers.setProperty("/pageSize", iPageSize);
+            oUsers.setProperty("/page", 1);
+            this._loadUsersPage();
         },
 
         onUserPress: function (oEvent) {
-            var oCtx = oEvent.getSource().getBindingContext();
+            var oCtx = oEvent.getSource().getBindingContext("users");
             if (!oCtx) return;
             var sId = oCtx.getProperty("ID");
             this.getOwnerComponent().getRouter().navTo("RouteDetail", { id: sId });
@@ -276,6 +396,7 @@ sap.ui.define([
                     MessageToast.show("Profile updated successfully.");
                     this.onCloseEditProfileDialog();
                     this._loadCurrentUserData();
+                    this._loadUsersPage();
                 }.bind(this),
                 error: function (oErr) {
                     this._oEditProfileDialog.setBusy(false);
