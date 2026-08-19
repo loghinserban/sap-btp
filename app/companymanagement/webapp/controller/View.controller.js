@@ -11,69 +11,54 @@ sap.ui.define([
 
     return Controller.extend("companymanagement.controller.View", {
 
+        _t: function (sKey, aArgs) { return this.getView().getModel("i18n").getResourceBundle().getText(sKey, aArgs); },
+
+        _action: function (sName) { return this.getOwnerComponent().getModel("v4").bindContext("/" + sName + "(...)"); },
+
         onBeforeRebindTable: function (oEvent) {
             var mBindingParams = oEvent.getParameter("bindingParams");
 
             mBindingParams.parameters = mBindingParams.parameters || {};
             mBindingParams.parameters.expand = "department";
 
-            var sQuery = (this.byId("smartFilterBar").getBasicSearchValue() || "").trim();
+            var sQuery = this.byId("smartFilterBar").getBasicSearchValue().trim();
 
-            if (!sQuery) {
-                return;
+            if (sQuery) {
+                mBindingParams.filters.push(new Filter({
+                    filters: [
+                        new Filter("firstName", FilterOperator.Contains, sQuery),
+                        new Filter("lastName", FilterOperator.Contains, sQuery),
+                        new Filter("email", FilterOperator.Contains, sQuery)
+                    ],
+                    and: false
+                }));
             }
-
-            var aSearchFilters = [];
-            aSearchFilters.push(new Filter("firstName", FilterOperator.Contains, sQuery));
-            aSearchFilters.push(new Filter("lastName", FilterOperator.Contains, sQuery));
-            aSearchFilters.push(new Filter("email", FilterOperator.Contains, sQuery));
-
-            mBindingParams.filters.push(new Filter({ filters: aSearchFilters, and: false }));
         },
 
         onItemPress: function (oEvent) {
-            var oItem = oEvent.getParameter("listItem");
-            var oContext = oItem.getBindingContext();
+            var oContext = oEvent.getParameter("listItem").getBindingContext();
 
-            if (!oContext) {
-                return;
-            }
             oEvent.getSource().removeSelections(true);
-
-            var oRouter = UIComponent.getRouterFor(this);
-            oRouter.navTo("RouteDetail", { param: oContext.getProperty("ID") });
+            UIComponent.getRouterFor(this).navTo("RouteDetail", { param: oContext.getProperty("ID") });
         },
 
-        onNavToSearch: function () {
-            UIComponent.getRouterFor(this).navTo("RouteSearch");
-        },
+        onNavToSearch: function () { UIComponent.getRouterFor(this).navTo("RouteSearch"); },
 
-        onNavToMasterData: function () {
-            UIComponent.getRouterFor(this).navTo("RouteAdmin");
-        },
+        onNavToMasterData: function () { UIComponent.getRouterFor(this).navTo("RouteAdmin"); },
 
-        onNavToDashboard: function () {
-            UIComponent.getRouterFor(this).navTo("RouteDashboard");
-        },
+        onNavToDashboard: function () { UIComponent.getRouterFor(this).navTo("RouteDashboard"); },
 
         // ADD EMPLOYEE
 
         onOpenAddEmployeeDialog: async function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-
             if (!this._oEmployeeForm) {
-                this._oEmployeeForm = await this.loadFragment({
-                    name: "companymanagement.view.EmployeeFormDialog"
-                });
-            }
-
-            if (!this.getView().getModel("form")) {
+                this._oEmployeeForm = await this.loadFragment({ name: "companymanagement.view.EmployeeFormDialog" });
                 this.getView().setModel(new JSONModel(), "form");
             }
 
             this.getView().getModel("form").setData({
-                title: oBundle.getText("addEmployee"),
-                confirmText: oBundle.getText("addEmployee")
+                title: this._t("addEmployee"),
+                confirmText: this._t("addEmployee")
             });
 
             this.byId("formFirstName").setValue("");
@@ -83,116 +68,91 @@ sap.ui.define([
             this.byId("formExperience").setValue(0);
             this.byId("formDepartment").setSelectedKey("");
 
-            this.byId("formFirstName").setValueState("None");
-            this.byId("formLastName").setValueState("None");
-            this.byId("formEmail").setValueState("None");
-            this.byId("formDateOfBirth").setValueState("None");
-            this.byId("formExperience").setValueState("None");
-            this.byId("formDepartment").setValueState("None");
+            var aFields = ["formFirstName", "formLastName", "formEmail", "formDateOfBirth", "formExperience", "formDepartment"];
+            for (var i = 0; i < aFields.length; i++) {
+                this.byId(aFields[i]).setValueState("None");
+            }
 
             this._oEmployeeForm.open();
         },
 
-        onCloseEmployeeForm: function () {
-            this._oEmployeeForm.close();
-        },
+        onCloseEmployeeForm: function () { this._oEmployeeForm.close(); },
 
         onRequiredFieldLiveChange: function (oEvent) {
             var oField = oEvent.getSource();
-            var sValue;
-
-            if (oField.getSelectedKey) {
-                sValue = oField.getSelectedKey();
-            } else {
-                sValue = oField.getValue().trim();
-            }
+            var sValue = oField.getSelectedKey ? oField.getSelectedKey() : oField.getValue().trim();
 
             oField.setValueState(sValue ? "None" : "Error");
         },
 
         onDateOfBirthChange: function (oEvent) {
             var oDatePicker = oEvent.getSource();
-            var bValid = oEvent.getParameter("valid");
             var oDate = oDatePicker.getDateValue();
+            var bBad = !oEvent.getParameter("valid") || (oDate && oDate > new Date());
 
-            if (!bValid || (oDate && oDate > new Date())) {
-                oDatePicker.setValueState("Error");
-            } else {
-                oDatePicker.setValueState("None");
-            }
+            oDatePicker.setValueState(bBad ? "Error" : "None");
         },
 
         onEmployeeFormConfirm: function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oModel = this.getOwnerComponent().getModel();
-            var rEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-            var oFirstName = this.byId("formFirstName");
-            var oLastName = this.byId("formLastName");
             var oEmail = this.byId("formEmail");
             var oDateOfBirth = this.byId("formDateOfBirth");
             var oDepartment = this.byId("formDepartment");
 
-            var sFirstName = oFirstName.getValue().trim();
-            var sLastName = oLastName.getValue().trim();
+            var sFirstName = this.byId("formFirstName").getValue().trim();
+            var sLastName = this.byId("formLastName").getValue().trim();
             var sEmail = oEmail.getValue().trim();
             var sDepartmentId = oDepartment.getSelectedKey();
             var oBirthDate = oDateOfBirth.getDateValue();
 
-            oFirstName.setValueState(sFirstName ? "None" : "Error");
-            oLastName.setValueState(sLastName ? "None" : "Error");
+            this.byId("formFirstName").setValueState(sFirstName ? "None" : "Error");
+            this.byId("formLastName").setValueState(sLastName ? "None" : "Error");
             oEmail.setValueState(sEmail ? "None" : "Error");
             oDepartment.setValueState(sDepartmentId ? "None" : "Error");
 
             if (!sFirstName || !sLastName || !sEmail || !sDepartmentId) {
-                MessageToast.show(oBundle.getText("msgFillRequiredFields"));
+                MessageToast.show(this._t("msgFillRequiredFields"));
                 return;
             }
 
-            if (!rEmail.test(sEmail)) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(sEmail)) {
                 oEmail.setValueState("Error");
-                oEmail.setValueStateText(oBundle.getText("msgInvalidEmail"));
-                MessageToast.show(oBundle.getText("msgInvalidEmail"));
+                oEmail.setValueStateText(this._t("msgInvalidEmail"));
+                MessageToast.show(this._t("msgInvalidEmail"));
                 return;
             }
 
             if (oBirthDate && oBirthDate > new Date()) {
                 oDateOfBirth.setValueState("Error");
-                oDateOfBirth.setValueStateText(oBundle.getText("msgInvalidDateOfBirth"));
-                MessageToast.show(oBundle.getText("msgInvalidDateOfBirth"));
+                oDateOfBirth.setValueStateText(this._t("msgInvalidDateOfBirth"));
+                MessageToast.show(this._t("msgInvalidDateOfBirth"));
                 return;
             }
 
-            var oNewEmployee = {
+            var that = this;
+            this.getOwnerComponent().getModel().create("/Employees", {
                 firstName: sFirstName,
                 lastName: sLastName,
                 email: sEmail,
                 dateOfBirth: oBirthDate || null,
                 experience: this.byId("formExperience").getValue() || 0,
                 department_ID: sDepartmentId
-            };
-
-            oModel.create("/Employees", oNewEmployee, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgEmployeeAdded"));
-                    this.byId("employeeSmartTable").rebindTable();
-                    this._oEmployeeForm.close();
+            }, {
+                success: function () {
+                    MessageToast.show(that._t("msgEmployeeAdded"));
+                    that.byId("employeeSmartTable").rebindTable();
+                    that._oEmployeeForm.close();
                 },
-                error: () => MessageToast.show(oBundle.getText("msgEmployeeAddError"))
+                error: function () { MessageToast.show(that._t("msgEmployeeAddError")); }
             });
         },
 
         onSeedData: async function () {
-            var oModel = this.getOwnerComponent().getModel("v4");
-            var oBinding = oModel.bindContext("/seedDemoData(...)");
-
+            var oBinding = this._action("seedDemoData");
             oBinding.setParameter("count", 25);
 
             try {
                 await oBinding.execute();
-                var sMessage = oBinding.getBoundContext().getObject().value;
-
-                MessageToast.show(sMessage);
+                MessageToast.show(oBinding.getBoundContext().getObject().value);
                 this.byId("employeeSmartTable").rebindTable();
             } catch (oError) {
                 MessageToast.show("Seeding failed: " + oError.message);
@@ -203,85 +163,23 @@ sap.ui.define([
 
         onOpenUploadCvDialog: async function () {
             if (!this._oCvDialog) {
-                this._oCvDialog = await this.loadFragment({
-                    name: "companymanagement.view.UploadCvDialog"
-                });
-            }
-
-            if (!this.getView().getModel("cv")) {
+                this._oCvDialog = await this.loadFragment({ name: "companymanagement.view.UploadCvDialog" });
                 this.getView().setModel(new JSONModel(), "cv");
             }
 
-            this.getView().getModel("cv").setData({
-                busy: false,
-                profile: null,
-                departmentID: ""
-            });
-
+            this.getView().getModel("cv").setData({ busy: false, profile: null, departmentID: "" });
             this._oCvFile = null;
             this.byId("cvFileUploader").clear();
             this._oCvDialog.open();
         },
 
-        onCloseCvDialog: function () {
-            this._oCvDialog.close();
-        },
+        onCloseCvDialog: function () { this._oCvDialog.close(); },
 
-        onCvFileSelected: function (oEvent) {
-            var aFiles = oEvent.getParameter("files");
-            this._oCvFile = aFiles && aFiles[0] ? aFiles[0] : null;
-        },
+        onCvFileSelected: function (oEvent) { this._oCvFile = (oEvent.getParameter("files") || [])[0]; },
 
-        onCvTypeMismatch: function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            MessageToast.show(oBundle.getText("msgCvNotPdf"));
-        },
+        onCvTypeMismatch: function () { MessageToast.show(this._t("msgCvNotPdf")); },
 
-        onCvFileSizeExceed: function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            MessageToast.show(oBundle.getText("msgCvTooLarge"));
-        },
-
-        onCvExtract: async function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oCvModel = this.getView().getModel("cv");
-
-            if (!this._oCvFile) {
-                MessageToast.show(oBundle.getText("msgCvPickFile"));
-                return;
-            }
-
-            oCvModel.setProperty("/busy", true);
-
-            try {
-                var sBase64 = await this._readFileAsBase64(this._oCvFile);
-
-                var oModel = this.getOwnerComponent().getModel("v4");
-                var oBinding = oModel.bindContext("/extractCv(...)");
-
-                oBinding.setParameter("fileName", this._oCvFile.name);
-                oBinding.setParameter("contentBase64", sBase64);
-
-                await oBinding.execute();
-                var oProfile = oBinding.getBoundContext().getObject();
-
-                var aSkills = oProfile.skills || [];
-                for (var i = 0; i < aSkills.length; i++) {
-                    aSkills[i].selected = !!aSkills[i].skillID;
-                }
-                oProfile.skills = aSkills;
-
-                oCvModel.setProperty("/profile", oProfile);
-
-                if (!aSkills.length) {
-                    MessageToast.show(oBundle.getText("msgCvNoSkills"));
-                }
-            } catch (oError) {
-                MessageToast.show(oBundle.getText("msgCvExtractError", [oError.message]));
-            }
-
-            oCvModel.setProperty("/busy", false);
-        },
+        onCvFileSizeExceed: function () { MessageToast.show(this._t("msgCvTooLarge")); },
 
         _readFileAsBase64: function (oFile) {
             return new Promise(function (resolve, reject) {
@@ -293,21 +191,48 @@ sap.ui.define([
                 oReader.onerror = function () {
                     reject(new Error("Could not read the file."));
                 };
-
                 oReader.readAsDataURL(oFile);
             });
         },
 
-        onCvCreateEmployee: async function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+        onCvExtract: async function () {
             var oCvModel = this.getView().getModel("cv");
-            var oData = oCvModel.getData();
-            var oProfile = oData.profile;
 
-            if (!oProfile) {
+            if (!this._oCvFile) {
+                MessageToast.show(this._t("msgCvPickFile"));
                 return;
             }
 
+            oCvModel.setProperty("/busy", true);
+
+            try {
+                var oBinding = this._action("extractCv");
+                oBinding.setParameter("fileName", this._oCvFile.name);
+                oBinding.setParameter("contentBase64", await this._readFileAsBase64(this._oCvFile));
+
+                await oBinding.execute();
+                var oProfile = oBinding.getBoundContext().getObject();
+
+                for (var i = 0; i < oProfile.skills.length; i++) {
+                    oProfile.skills[i].selected = !!oProfile.skills[i].skillID;
+                }
+
+                oCvModel.setProperty("/profile", oProfile);
+
+                if (!oProfile.skills.length) {
+                    MessageToast.show(this._t("msgCvNoSkills"));
+                }
+            } catch (oError) {
+                MessageToast.show(this._t("msgCvExtractError", [oError.message]));
+            }
+
+            oCvModel.setProperty("/busy", false);
+        },
+
+        onCvCreateEmployee: async function () {
+            var oCvModel = this.getView().getModel("cv");
+            var oData = oCvModel.getData();
+            var oProfile = oData.profile;
             var aSkills = [];
             var aNewNames = [];
 
@@ -331,20 +256,14 @@ sap.ui.define([
                 }
             }
 
-            // skill nou = intra in catalogul comun, deci intrebam intai
-            if (aNewNames.length) {
-                var bConfirmed = await this._confirmNewSkills(aNewNames);
-                if (!bConfirmed) {
-                    return;
-                }
+            if (aNewNames.length && !await this._confirmNewSkills(aNewNames)) {
+                return;
             }
 
             oCvModel.setProperty("/busy", true);
 
             try {
-                var oModel = this.getOwnerComponent().getModel("v4");
-                var oBinding = oModel.bindContext("/createEmployeeFromCv(...)");
-
+                var oBinding = this._action("createEmployeeFromCv");
                 oBinding.setParameter("profile", {
                     firstName: oProfile.firstName,
                     lastName: oProfile.lastName,
@@ -355,29 +274,26 @@ sap.ui.define([
                 oBinding.setParameter("departmentID", oData.departmentID || null);
 
                 await oBinding.execute();
-                var sMessage = oBinding.getBoundContext().getObject().value;
-
-                MessageToast.show(sMessage);
+                MessageToast.show(oBinding.getBoundContext().getObject().value);
 
                 this._oCvDialog.close();
                 this.getOwnerComponent().getModel().refresh();
                 this.byId("employeeSmartTable").rebindTable();
             } catch (oError) {
-                MessageToast.show(oBundle.getText("msgCvCreateError", [oError.message]));
+                MessageToast.show(this._t("msgCvCreateError", [oError.message]));
             }
 
             oCvModel.setProperty("/busy", false);
         },
 
         _confirmNewSkills: function (aNames) {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            var sMessage = this._t("msgCvConfirmNewSkills", [aNames.join(", ")]);
+            var sTitle = this._t("cvConfirmNewSkillsTitle");
 
             return new Promise(function (resolve) {
-                MessageBox.confirm(oBundle.getText("msgCvConfirmNewSkills", [aNames.join(", ")]), {
-                    title: oBundle.getText("cvConfirmNewSkillsTitle"),
-                    onClose: function (oAction) {
-                        resolve(oAction === MessageBox.Action.OK);
-                    }
+                MessageBox.confirm(sMessage, {
+                    title: sTitle,
+                    onClose: function (oAction) { resolve(oAction === MessageBox.Action.OK); }
                 });
             });
         }

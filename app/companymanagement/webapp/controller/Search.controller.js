@@ -11,15 +11,20 @@ sap.ui.define([
     return Controller.extend("companymanagement.controller.Search", {
 
         onInit: function () {
-            var model = new JSONModel({
+            this.getView().setModel(new JSONModel(), "search");
+            this.reset();
+        },
+
+        reset: function () {
+            this.getView().getModel("search").setData({
                 results: [],
                 busy: false,
                 searched: false,
                 hasPartial: false
             });
-
-            this.getView().setModel(model, "search");
         },
+
+        text: function (key, args) { return this.getView().getModel("i18n").getResourceBundle().getText(key, args); },
 
         onFilterChange: function () {
             clearTimeout(this.timer);
@@ -29,10 +34,7 @@ sap.ui.define([
         onSearch: function () {
             clearTimeout(this.timer);
 
-            var bundle = this.getView().getModel("i18n").getResourceBundle();
-            var model = this.getOwnerComponent().getModel();
             var searchModel = this.getView().getModel("search");
-
             var items = this.byId("searchSkills").getSelectedItems();
             var wantedIds = [];
             var wantedNames = [];
@@ -42,15 +44,8 @@ sap.ui.define([
                 wantedNames.push(items[i].getText());
             }
 
-            var query = this.byId("searchQuery").getValue().trim();
-
-            if (wantedIds.length === 0 && query === "") {
-                searchModel.setData({
-                    results: [],
-                    busy: false,
-                    searched: false,
-                    hasPartial: false
-                });
+            if (wantedIds.length === 0 && this.byId("searchQuery").getValue().trim() === "") {
+                this.reset();
                 return;
             }
 
@@ -74,29 +69,23 @@ sap.ui.define([
 
             searchModel.setProperty("/busy", true);
 
-            model.read("/EmployeeSkills", {
+            this.getOwnerComponent().getModel().read("/EmployeeSkills", {
                 filters: filters,
-                urlParameters: {
-                    "$expand": "employee/department,skill"
-                },
+                urlParameters: { "$expand": "employee/department,skill" },
                 success: (data) => {
                     this.buildResults(data.results, wantedIds, wantedNames);
                     searchModel.setProperty("/busy", false);
                     searchModel.setProperty("/searched", true);
                 },
                 error: () => {
-                    searchModel.setProperty("/results", []);
-                    searchModel.setProperty("/hasPartial", false);
-                    searchModel.setProperty("/busy", false);
+                    this.reset();
                     searchModel.setProperty("/searched", true);
-                    MessageToast.show(bundle.getText("msgSearchError"));
+                    MessageToast.show(this.text("msgSearchError"));
                 }
             });
         },
 
         buildResults: function (rows, wantedIds, wantedNames) {
-            var bundle = this.getView().getModel("i18n").getResourceBundle();
-
             var maxMonths = parseInt(this.byId("searchFreshness").getSelectedKey(), 10);
             var departmentId = this.byId("searchDepartment").getSelectedKey();
             var query = this.byId("searchQuery").getValue().trim().toLowerCase();
@@ -124,19 +113,12 @@ sap.ui.define([
                 if (maxMonths > 0 && (months === null || months > maxMonths)) {
                     continue;
                 }
-
                 if (departmentId && employee.department_ID !== departmentId) {
                     continue;
                 }
-
-                if (query) {
-                    var text = (employee.firstName + " " + employee.lastName + " " + employee.email).toLowerCase();
-
-                    if (text.indexOf(query) < 0) {
-                        continue;
-                    }
+                if (query && (employee.firstName + " " + employee.lastName + " " + employee.email).toLowerCase().indexOf(query) < 0) {
+                    continue;
                 }
-
                 if (!isNaN(minExperience) && (employee.experience || 0) < minExperience) {
                     continue;
                 }
@@ -179,15 +161,15 @@ sap.ui.define([
                 var icon = "sap-icon://question-mark";
                 var weight = 0.5;
                 var rank = 1;
-                var when = bundle.getText("neverUsed");
+                var when = this.text("neverUsed");
 
                 if (months !== null) {
                     if (months < 1) {
-                        when = bundle.getText("usedThisMonth");
+                        when = this.text("usedThisMonth");
                     } else if (months < 12) {
-                        when = bundle.getText("usedMonthsAgo", [months]);
+                        when = this.text("usedMonthsAgo", [months]);
                     } else {
-                        when = bundle.getText("usedYearsAgo", [Math.floor(months / 12)]);
+                        when = this.text("usedYearsAgo", [Math.floor(months / 12)]);
                     }
 
                     if (months <= 12) {
@@ -208,17 +190,14 @@ sap.ui.define([
                     }
                 }
 
-                var skillName = row.skill ? row.skill.name : "";
-
                 entry.skillIds.push(row.skill_ID);
                 entry.skills.push({
-                    label: skillName + " · " + row.rating + "/5 · " + when,
+                    label: (row.skill ? row.skill.name : "") + " · " + row.rating + "/5 · " + when,
                     freshness: state,
                     icon: icon,
                     rating: row.rating,
                     weight: weight
                 });
-
                 entry.total = entry.total + row.rating * weight;
 
                 if (rank > entry.worstRank) {
@@ -236,12 +215,12 @@ sap.ui.define([
                 result.score = Math.round(result.total / result.matched / 5 * 100);
 
                 if (wantedIds.length === 0) {
-                    result.coverageText = bundle.getText("coverageSkills", [result.matched]);
+                    result.coverageText = this.text("coverageSkills", [result.matched]);
                 } else {
                     for (var m = 0; m < wantedIds.length; m++) {
                         if (result.skillIds.indexOf(wantedIds[m]) < 0) {
                             result.skills.push({
-                                label: bundle.getText("skillMissing", [wantedNames[m]]),
+                                label: this.text("skillMissing", [wantedNames[m]]),
                                 freshness: "None",
                                 icon: "sap-icon://less",
                                 rating: 0,
@@ -250,7 +229,7 @@ sap.ui.define([
                         }
                     }
 
-                    result.coverageText = bundle.getText("coverage", [result.matched, wantedIds.length]);
+                    result.coverageText = this.text("coverage", [result.matched, wantedIds.length]);
                 }
 
                 if (wantedIds.length > 1 && result.matched < wantedIds.length) {
@@ -298,24 +277,13 @@ sap.ui.define([
             this.byId("searchMinAge").setValue("");
             this.byId("searchMaxAge").setValue("");
             this.byId("searchQuery").setValue("");
-
-            this.getView().getModel("search").setData({
-                results: [],
-                busy: false,
-                searched: false,
-                hasPartial: false
-            });
+            this.reset();
         },
 
         onResultPress: function (oEvent) {
-            var item = oEvent.getParameter("listItem");
-            var context = item.getBindingContext("search");
+            var context = oEvent.getParameter("listItem").getBindingContext("search");
 
-            if (!context) {
-                return;
-            }
             oEvent.getSource().removeSelections(true);
-
             UIComponent.getRouterFor(this).navTo("RouteDetail", { param: context.getProperty("ID") });
         },
 

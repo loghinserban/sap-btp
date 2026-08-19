@@ -16,402 +16,214 @@ sap.ui.define([
             this.getView().setModel(new JSONModel({ message: "" }), "merge");
         },
 
-        formatUsageState: function (iCount) {
-            return iCount ? "Information" : "Success";
+        _t: function (sKey, aArgs) { return this.getView().getModel("i18n").getResourceBundle().getText(sKey, aArgs); },
+
+        _model: function () { return this.getOwnerComponent().getModel(); },
+
+        _dialog: async function (sProp, sFragment) {
+            if (!this[sProp]) {
+                this[sProp] = await this.loadFragment({ name: "companymanagement.view." + sFragment });
+            }
+            return this[sProp];
         },
 
-        onSearchSkills: function (oEvent) {
-            this._filterByName("skillsMasterTable", oEvent.getSource().getValue());
+        _after: function (sOkKey, sErrKey, oDialog) {
+            var that = this;
+            return {
+                success: function () {
+                    MessageToast.show(that._t(sOkKey));
+                    that._model().refresh(true);
+                    if (oDialog) {
+                        oDialog.close();
+                    }
+                },
+                error: function () { MessageToast.show(that._t(sErrKey)); }
+            };
         },
 
-        onSearchDepartments: function (oEvent) {
-            this._filterByName("departmentsMasterTable", oEvent.getSource().getValue());
+        _confirmDelete: function (sPath, sConfirmKey, sOkKey, sErrKey) {
+            var that = this;
+
+            MessageBox.confirm(this._t(sConfirmKey), {
+                title: this._t("msgConfirmDeleteTitle"),
+                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+                onClose: function (oAction) {
+                    if (oAction === MessageBox.Action.OK) {
+                        that._model().remove(sPath, that._after(sOkKey, sErrKey));
+                    }
+                }
+            });
         },
+
+        formatUsageState: function (iCount) { return iCount ? "Information" : "Success"; },
+
+        onSearchSkills: function (oEvent) { this._filterByName("skillsMasterTable", oEvent.getSource().getValue()); },
+
+        onSearchDepartments: function (oEvent) { this._filterByName("departmentsMasterTable", oEvent.getSource().getValue()); },
 
         _filterByName: function (sTableId, sQuery) {
-            var oBinding = this.byId(sTableId).getBinding("items");
+            var sValue = sQuery.trim();
+            var aFilters = sValue ? [new Filter("name", FilterOperator.Contains, sValue)] : [];
 
-            if (!oBinding) {
-                return;
-            }
-
-            var sValue = (sQuery || "").trim();
-
-            if (sValue) {
-                oBinding.filter([new Filter("name", FilterOperator.Contains, sValue)]);
-            } else {
-                oBinding.filter([]);
-            }
+            this.byId(sTableId).getBinding("items").filter(aFilters);
         },
 
         onNavBack: function () {
             UIComponent.getRouterFor(this).navTo("RouteView", {}, true);
         },
 
-        // SKILLS
+        _openForm: async function (sProp, sFragment, sPrefix, sTitleKey, oContext) {
+            var oDialog = await this._dialog(sProp, sFragment);
 
-        onAddSkill: async function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+            this[sProp + "Path"] = oContext ? oContext.getPath() : null;
 
-            if (!this._oSkillDialog) {
-                this._oSkillDialog = await this.loadFragment({
-                    name: "companymanagement.view.SkillFormDialog"
-                });
-            }
-
-            this._sEditSkillPath = null;
-
-            this._oSkillDialog.setTitle(oBundle.getText("createSkill"));
-            this.byId("skillFormName").setValue("");
-            this.byId("skillFormName").setValueState("None");
-            this.byId("skillFormDescription").setValue("");
-            this._oSkillDialog.open();
+            oDialog.setTitle(this._t(sTitleKey));
+            this.byId(sPrefix + "Name").setValue(oContext ? oContext.getProperty("name") : "");
+            this.byId(sPrefix + "Name").setValueState("None");
+            this.byId(sPrefix + "Description").setValue(oContext ? oContext.getProperty("description") : "");
+            oDialog.open();
         },
 
-        onEditSkill: async function (oEvent) {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oContext = oEvent.getSource().getBindingContext();
+        _saveForm: function (sProp, sPrefix, sEntitySet, sAddKey, sAddErrKey, sUpdKey, sUpdErrKey) {
+            var oNameInput = this.byId(sPrefix + "Name");
+            var sName = oNameInput.getValue().trim();
 
-            if (!oContext) {
+            if (!sName) {
+                oNameInput.setValueState("Error");
+                MessageToast.show(this._t("msgFillRequiredFields"));
                 return;
             }
+            oNameInput.setValueState("None");
 
-            if (!this._oSkillDialog) {
-                this._oSkillDialog = await this.loadFragment({
-                    name: "companymanagement.view.SkillFormDialog"
-                });
+            var oData = {
+                name: sName,
+                description: this.byId(sPrefix + "Description").getValue().trim()
+            };
+            var sPath = this[sProp + "Path"];
+
+            if (sPath) {
+                this._model().update(sPath, oData, this._after(sUpdKey, sUpdErrKey, this[sProp]));
+            } else {
+                this._model().create(sEntitySet, oData, this._after(sAddKey, sAddErrKey, this[sProp]));
             }
+        },
 
-            var oSkill = oContext.getObject();
-            this._sEditSkillPath = oContext.getPath();
+        // SKILLS
 
-            this._oSkillDialog.setTitle(oBundle.getText("editSkill"));
-            this.byId("skillFormName").setValue(oSkill.name || "");
-            this.byId("skillFormName").setValueState("None");
-            this.byId("skillFormDescription").setValue(oSkill.description || "");
-            this._oSkillDialog.open();
+        onAddSkill: function () { this._openForm("_oSkillDialog", "SkillFormDialog", "skillForm", "createSkill", null); },
+
+        onEditSkill: function (oEvent) {
+            this._openForm("_oSkillDialog", "SkillFormDialog", "skillForm", "editSkill", oEvent.getSource().getBindingContext());
         },
 
         onSaveSkill: function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oModel = this.getOwnerComponent().getModel();
-            var oNameInput = this.byId("skillFormName");
-            var sName = oNameInput.getValue().trim();
-
-            if (!sName) {
-                oNameInput.setValueState("Error");
-                MessageToast.show(oBundle.getText("msgFillRequiredFields"));
-                return;
-            }
-            oNameInput.setValueState("None");
-
-            var oSkill = {
-                name: sName,
-                description: this.byId("skillFormDescription").getValue().trim()
-            };
-
-            if (this._sEditSkillPath) {
-                oModel.update(this._sEditSkillPath, oSkill, {
-                    success: () => {
-                        MessageToast.show(oBundle.getText("msgSkillMasterUpdated"));
-                        oModel.refresh(true);
-                        this._oSkillDialog.close();
-                    },
-                    error: () => MessageToast.show(oBundle.getText("msgSkillMasterUpdateError"))
-                });
-                return;
-            }
-
-            oModel.create("/Skills", oSkill, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgSkillMasterAdded"));
-                    oModel.refresh(true);
-                    this._oSkillDialog.close();
-                },
-                error: () => MessageToast.show(oBundle.getText("msgSkillMasterAddError"))
-            });
+            this._saveForm("_oSkillDialog", "skillForm", "/Skills", "msgSkillMasterAdded", "msgSkillMasterAddError", "msgSkillMasterUpdated", "msgSkillMasterUpdateError");
         },
 
         onDeleteSkill: function (oEvent) {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oModel = this.getOwnerComponent().getModel();
             var oContext = oEvent.getSource().getBindingContext();
-            var sPath = oContext.getPath();
-
             var iUsed = oContext.getProperty("usageCount") || 0;
 
-            if (iUsed > 0) {
-                MessageBox.error(oBundle.getText("msgSkillInUse", [iUsed]));
+            if (iUsed) {
+                MessageBox.error(this._t("msgSkillInUse", [iUsed]));
                 return;
             }
 
-            MessageBox.confirm(oBundle.getText("msgConfirmDeleteSkillMaster"), {
-                title: oBundle.getText("msgConfirmDeleteTitle"),
-                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
-                onClose: function (oAction) {
-                    if (oAction !== MessageBox.Action.OK) {
-                        return;
-                    }
-
-                    oModel.remove(sPath, {
-                        success: function () {
-                            MessageToast.show(oBundle.getText("msgSkillMasterDeleted"));
-                            oModel.refresh(true);
-                        },
-                        error: function () {
-                            MessageToast.show(oBundle.getText("msgSkillMasterDeleteError"));
-                        }
-                    });
-                }
-            });
+            this._confirmDelete(oContext.getPath(), "msgConfirmDeleteSkillMaster", "msgSkillMasterDeleted", "msgSkillMasterDeleteError");
         },
 
-        onCloseSkillDialog: function () {
-            this._oSkillDialog.close();
-        },
+        onCloseSkillDialog: function () { this._oSkillDialog.close(); },
 
         // DEPARTMENTS
 
-        onAddDepartment: async function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-
-            if (!this._oDepartmentDialog) {
-                this._oDepartmentDialog = await this.loadFragment({
-                    name: "companymanagement.view.DepartmentFormDialog"
-                });
-            }
-
-            this._sEditDepartmentPath = null;
-
-            this._oDepartmentDialog.setTitle(oBundle.getText("createDepartment"));
-            this.byId("departmentFormName").setValue("");
-            this.byId("departmentFormName").setValueState("None");
-            this.byId("departmentFormDescription").setValue("");
-            this._oDepartmentDialog.open();
+        onAddDepartment: function () {
+            this._openForm("_oDepartmentDialog", "DepartmentFormDialog", "departmentForm", "createDepartment", null);
         },
 
-        onEditDepartment: async function (oEvent) {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oContext = oEvent.getSource().getBindingContext();
-
-            if (!oContext) {
-                return;
-            }
-
-            if (!this._oDepartmentDialog) {
-                this._oDepartmentDialog = await this.loadFragment({
-                    name: "companymanagement.view.DepartmentFormDialog"
-                });
-            }
-
-            var oDepartment = oContext.getObject();
-            this._sEditDepartmentPath = oContext.getPath();
-
-            this._oDepartmentDialog.setTitle(oBundle.getText("editDepartment"));
-            this.byId("departmentFormName").setValue(oDepartment.name || "");
-            this.byId("departmentFormName").setValueState("None");
-            this.byId("departmentFormDescription").setValue(oDepartment.description || "");
-            this._oDepartmentDialog.open();
+        onEditDepartment: function (oEvent) {
+            this._openForm("_oDepartmentDialog", "DepartmentFormDialog", "departmentForm", "editDepartment", oEvent.getSource().getBindingContext());
         },
 
         onSaveDepartment: function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oModel = this.getOwnerComponent().getModel();
-            var oNameInput = this.byId("departmentFormName");
-            var sName = oNameInput.getValue().trim();
-
-            if (!sName) {
-                oNameInput.setValueState("Error");
-                MessageToast.show(oBundle.getText("msgFillRequiredFields"));
-                return;
-            }
-            oNameInput.setValueState("None");
-
-            var oDepartment = {
-                name: sName,
-                description: this.byId("departmentFormDescription").getValue().trim()
-            };
-
-            if (this._sEditDepartmentPath) {
-                oModel.update(this._sEditDepartmentPath, oDepartment, {
-                    success: () => {
-                        MessageToast.show(oBundle.getText("msgDepartmentUpdated"));
-                        oModel.refresh(true);
-                        this._oDepartmentDialog.close();
-                    },
-                    error: () => MessageToast.show(oBundle.getText("msgDepartmentUpdateError"))
-                });
-                return;
-            }
-
-            oModel.create("/Departments", oDepartment, {
-                success: () => {
-                    MessageToast.show(oBundle.getText("msgDepartmentAdded"));
-                    oModel.refresh(true);
-                    this._oDepartmentDialog.close();
-                },
-                error: () => MessageToast.show(oBundle.getText("msgDepartmentAddError"))
-            });
+            this._saveForm("_oDepartmentDialog", "departmentForm", "/Departments", "msgDepartmentAdded", "msgDepartmentAddError", "msgDepartmentUpdated", "msgDepartmentUpdateError");
         },
 
         onDeleteDepartment: function (oEvent) {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oModel = this.getOwnerComponent().getModel();
             var oContext = oEvent.getSource().getBindingContext();
-            var sPath = oContext.getPath();
-
-            // cati angajati are departamentul, tot din usageCount
             var iUsed = oContext.getProperty("usageCount") || 0;
 
-            if (iUsed > 0) {
+            if (iUsed) {
                 this._openReassignDialog(oContext.getProperty("ID"), iUsed);
                 return;
             }
 
-            MessageBox.confirm(oBundle.getText("msgConfirmDeleteDepartment"), {
-                title: oBundle.getText("msgConfirmDeleteTitle"),
-                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
-                onClose: function (oAction) {
-                    if (oAction !== MessageBox.Action.OK) {
-                        return;
-                    }
-
-                    oModel.remove(sPath, {
-                        success: function () {
-                            MessageToast.show(oBundle.getText("msgDepartmentDeleted"));
-                            oModel.refresh(true);
-                        },
-                        error: function () {
-                            MessageToast.show(oBundle.getText("msgDepartmentDeleteError"));
-                        }
-                    });
-                }
-            });
+            this._confirmDelete(oContext.getPath(), "msgConfirmDeleteDepartment", "msgDepartmentDeleted", "msgDepartmentDeleteError");
         },
 
-        onCloseDepartmentDialog: function () {
-            this._oDepartmentDialog.close();
+        onCloseDepartmentDialog: function () { this._oDepartmentDialog.close(); },
+
+        // REASSIGN AND MERGE
+
+        _openTransferDialog: async function (sProp, sFragment, sModelName, sSelectId, sMessage) {
+            var oDialog = await this._dialog(sProp, sFragment);
+
+            this.getView().getModel(sModelName).setProperty("/message", sMessage);
+            this.byId(sSelectId).setSelectedKey("");
+            this.byId(sSelectId).setValueState("None");
+            oDialog.open();
         },
 
-        // REASSIGN
-
-        _openReassignDialog: async function (sDepartmentId, iCount) {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-
-            if (!this._oReassignDialog) {
-                this._oReassignDialog = await this.loadFragment({
-                    name: "companymanagement.view.ReassignDepartmentDialog"
-                });
-            }
-
-            this._sReassignFromId = sDepartmentId;
-
-            this.getView().getModel("reassign").setProperty(
-                "/message",
-                oBundle.getText("msgDepartmentInUse", [iCount])
-            );
-
-            this.byId("reassignTarget").setSelectedKey("");
-            this.byId("reassignTarget").setValueState("None");
-            this._oReassignDialog.open();
-        },
-
-        onConfirmReassign: async function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oTarget = this.byId("reassignTarget");
+        _runTransfer: async function (sSelectId, sFromId, sAction, sPickKey, sOkKey, sErrKey, oDialog) {
+            var oTarget = this.byId(sSelectId);
             var sToId = oTarget.getSelectedKey();
 
-            if (!sToId || sToId === this._sReassignFromId) {
+            if (!sToId || sToId === sFromId) {
                 oTarget.setValueState("Error");
-                MessageToast.show(oBundle.getText("msgPickOtherDepartment"));
+                MessageToast.show(this._t(sPickKey));
                 return;
             }
             oTarget.setValueState("None");
 
-            var oModel = this.getOwnerComponent().getModel("v4");
-            var oBinding = oModel.bindContext("/reassignDepartment(...)");
-
-            oBinding.setParameter("fromID", this._sReassignFromId);
+            var oBinding = this.getOwnerComponent().getModel("v4").bindContext("/" + sAction + "(...)");
+            oBinding.setParameter("fromID", sFromId);
             oBinding.setParameter("toID", sToId);
 
             try {
                 await oBinding.execute();
-
-                MessageToast.show(oBundle.getText("msgDepartmentReassigned"));
-                this.getOwnerComponent().getModel().refresh(true);
-                this._oReassignDialog.close();
+                MessageToast.show(this._t(sOkKey));
+                this._model().refresh(true);
+                oDialog.close();
             } catch (oError) {
-                MessageToast.show(oBundle.getText("msgDepartmentDeleteError"));
+                MessageToast.show(this._t(sErrKey));
             }
         },
 
-        onCloseReassignDialog: function () {
-            this._oReassignDialog.close();
+        _openReassignDialog: function (sDepartmentId, iCount) {
+            this._sReassignFromId = sDepartmentId;
+            this._openTransferDialog("_oReassignDialog", "ReassignDepartmentDialog", "reassign", "reassignTarget", this._t("msgDepartmentInUse", [iCount]));
         },
 
-        // MERGE SKILLS
+        onConfirmReassign: function () {
+            this._runTransfer("reassignTarget", this._sReassignFromId, "reassignDepartment", "msgPickOtherDepartment", "msgDepartmentReassigned", "msgDepartmentDeleteError", this._oReassignDialog);
+        },
 
-        onMergeSkill: async function (oEvent) {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+        onCloseReassignDialog: function () { this._oReassignDialog.close(); },
+
+        onMergeSkill: function (oEvent) {
             var oContext = oEvent.getSource().getBindingContext();
 
-            if (!oContext) {
-                return;
-            }
-
-            if (!this._oMergeSkillDialog) {
-                this._oMergeSkillDialog = await this.loadFragment({
-                    name: "companymanagement.view.MergeSkillDialog"
-                });
-            }
-
             this._sMergeFromId = oContext.getProperty("ID");
-
-            this.getView().getModel("merge").setProperty(
-                "/message",
-                oBundle.getText("msgMergeSkillInfo", [
-                    oContext.getProperty("name"),
-                    oContext.getProperty("usageCount") || 0
-                ])
-            );
-
-            this.byId("mergeSkillTarget").setSelectedKey("");
-            this.byId("mergeSkillTarget").setValueState("None");
-            this._oMergeSkillDialog.open();
+            this._openTransferDialog("_oMergeSkillDialog", "MergeSkillDialog", "merge", "mergeSkillTarget", this._t("msgMergeSkillInfo", [
+                oContext.getProperty("name"),
+                oContext.getProperty("usageCount") || 0
+            ]));
         },
 
-        onConfirmMergeSkill: async function () {
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-            var oTarget = this.byId("mergeSkillTarget");
-            var sToId = oTarget.getSelectedKey();
-
-            if (!sToId || sToId === this._sMergeFromId) {
-                oTarget.setValueState("Error");
-                MessageToast.show(oBundle.getText("msgPickOtherSkill"));
-                return;
-            }
-            oTarget.setValueState("None");
-
-            var oModel = this.getOwnerComponent().getModel("v4");
-            var oBinding = oModel.bindContext("/mergeSkills(...)");
-
-            oBinding.setParameter("fromID", this._sMergeFromId);
-            oBinding.setParameter("toID", sToId);
-
-            try {
-                await oBinding.execute();
-
-                MessageToast.show(oBundle.getText("msgSkillsMerged"));
-                this.getOwnerComponent().getModel().refresh(true);
-                this._oMergeSkillDialog.close();
-            } catch (oError) {
-                MessageToast.show(oBundle.getText("msgSkillsMergeError"));
-            }
+        onConfirmMergeSkill: function () {
+            this._runTransfer("mergeSkillTarget", this._sMergeFromId, "mergeSkills", "msgPickOtherSkill", "msgSkillsMerged", "msgSkillsMergeError", this._oMergeSkillDialog);
         },
 
-        onCloseMergeSkillDialog: function () {
-            this._oMergeSkillDialog.close();
-        }
+        onCloseMergeSkillDialog: function () { this._oMergeSkillDialog.close(); }
 
     });
 });
